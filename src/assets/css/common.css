@@ -1,0 +1,65 @@
+/* 通用公共样式 */
+.flex {
+  display: flex;
+}
+.justify-center {
+  justify-content: center;
+}
+.items-center {
+  align-items: center;
+}
+.flex-column {
+  display: flex;
+  flex-direction: column;
+}
+.p-10 {
+  padding: 10px;
+}
+.m-10 {
+  margin: 10px;
+}
+.w-1320 {
+  width: 1320px;
+}
+.h-680 {
+  height: 680px;
+}
+.w-960 {
+  width: 960px;
+}
+.h-540 {
+  height: 540px;
+}
+.w-350 {
+  width: 350px;
+}
+.h-320 {
+  height: 320px;
+}
+.w-65 {
+  width: 65px;
+}
+.h-65 {
+  height: 65px;
+}
+.round-50 {
+  border-radius: 50%;
+}
+.round-5 {
+  border-radius: 5px;
+}
+.opc-9 {
+  opacity: 0.9;
+}
+.c-black {
+  color: var(--color-font-main);
+}
+.fs-16 {
+  font-size: 16px;
+}
+.bg-white {
+  background-color: var(--color-background);
+}
+.small-input {
+  width: 250px!important;
+}
