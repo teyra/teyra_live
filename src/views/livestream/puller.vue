@@ -42,19 +42,20 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
+import { io } from 'socket.io-client'
 let message = ref('')
 let localVideoRef: any = ref<HTMLVideoElement>()
-let localPeerConnection = reactive({} as RTCPeerConnection)
-let remotePeerConnection = reactive({} as RTCPeerConnection)
+let peerConnection = reactive({} as RTCPeerConnection)
+let websocket = ref()
 onMounted(() => {
-  videoCall()
-})
-const videoCall = async () => {
-  await initPeerConnection()
-  await iceListenner()
-  await createConnect()
-}
-const initPeerConnection = () => {
+  websocket.value = io('ws://localhost:8080')
+  websocket.value.on('connect', () => {
+    console.log('连接成功')
+  })
+  websocket.value.emit('joinRoom', '123')
+  websocket.value.on('create', (room: any) => {
+    console.log('创建或加入房间' + room)
+  })
   let serverConfig = {
     iceServers: [
       {
@@ -62,42 +63,49 @@ const initPeerConnection = () => {
       }
     ]
   }
-  localPeerConnection = new RTCPeerConnection(serverConfig)
-  remotePeerConnection = new RTCPeerConnection(serverConfig)
-}
-const createConnect = async () => {
-  const localSdp = await localPeerConnection.createOffer()
-  localPeerConnection.setLocalDescription(localSdp)
-  remotePeerConnection.setRemoteDescription(localSdp)
-  const remoteSdp = await remotePeerConnection.createAnswer()
-  remotePeerConnection.setLocalDescription(remoteSdp)
-  localPeerConnection.setRemoteDescription(remoteSdp)
-}
-const iceListenner = () => {
-  localPeerConnection.onicecandidate = (event) => {
-    console.log('I got local icecandidate info')
-    if (event.candidate) {
-      // add candidate to remote peer connection
-      remotePeerConnection.addIceCandidate(event.candidate)
+  websocket.value.on('offer', async (offer: any) => {
+    console.log('get offer' + offer)
+    peerConnection = new RTCPeerConnection(serverConfig)
+    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+    const answer = await peerConnection.createAnswer()
+    await peerConnection.setLocalDescription(answer)
+    websocket.value.emit('offer', answer,'123')
+    peerConnection.onicecandidate = (event) => {
+      console.log('I got remote icecandidate info')
+      let icecandidate = event.candidate
+      // console.log(event)
+      if (icecandidate) {
+        websocket.value.emit('ice', icecandidate,'123')
+      }
     }
-  }
-  // 如果监测到本地媒体流连接到本地，将其绑定到一个video标签上输出
-  localPeerConnection.ontrack = (event) => {
-    console.log(event)
-    // localVideoRef.value.srcObject = event.streams[0];
-  }
-  remotePeerConnection.onicecandidate = (event) => {
-    console.log('I got remote icecandidate info')
-    if (event.candidate) {
-      // add candidate to local peer connection
-      localPeerConnection.addIceCandidate(event.candidate)
+    peerConnection.addEventListener('connectionstatechange', (event) => {
+      if (peerConnection.connectionState === 'connected') {
+        // Peers connected!
+      }
+    })
+    peerConnection.addEventListener('track', async (event) => {
+      console.log(event)
+    })
+    peerConnection.ontrack = (event) => {
+      console.log(event + 'ontrack')
+      // localVideoRef.value.srcObject = event.streams[0]
     }
-  }
-  remotePeerConnection.ontrack = (event) => {
-    console.log(event)
-    localVideoRef.value.srcObject = event.streams[0] // chrome
-  }
-}
+  })
+  websocket.value.on('ice', (candidate: any) => {
+    console.log(candidate + 'candidate')
+    if (candidate) {
+      try {
+        peerConnection.addIceCandidate(candidate)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  })
+})
+// const videoCall = async () => {
+//   await iceListenner()
+// }
+const iceListenner = () => {}
 </script>
 <style scoped lang="scss">
 .pull-container {

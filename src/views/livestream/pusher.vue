@@ -102,18 +102,17 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 //@ts-ignore
 import { ElMessage } from 'element-plus'
 import { MediaMaterialEnum } from '@/enums/media'
+import { io } from 'socket.io-client'
 let message = ref('')
 let volume = ref(0)
 let materialDialogVisible = ref(false)
 let materialName = ref('')
 let localVideoRef: any = ref<HTMLVideoElement>()
-let remoteVideoRef: any = ref<HTMLVideoElement>()
-let localPeerConnection = reactive({} as RTCPeerConnection)
-let remotePeerConnection = reactive({} as RTCPeerConnection)
+let peerConnection = reactive({} as RTCPeerConnection)
 interface materialItem {
   name: string
 }
@@ -130,6 +129,36 @@ watch(
   }
 )
 let materialList = reactive([] as materialItem[])
+let websocket = ref()
+onMounted(() => {
+  websocket.value = io('ws://localhost:8080')
+  websocket.value.on('connect', () => {
+    console.log('连接成功')
+  })
+  websocket.value.emit('joinRoom', '123')
+  websocket.value.on('create', (room: any) => {
+    console.log('创建或加入房间' + room)
+  })
+  websocket.value.on('offer', async (offer: any) => {
+    console.log(offer)
+    console.log(peerConnection + 'peerConnection')
+    // 接受保存clientA的应答SDP对象
+    if (offer) {
+      const remoteDesc = new RTCSessionDescription(offer)
+      await peerConnection.setRemoteDescription(remoteDesc)
+    }
+  })
+  websocket.value.on('ice', (candidate: any) => {
+    console.log(candidate + 'candidate')
+    if (candidate) {
+      try {
+        peerConnection.addIceCandidate(candidate)
+      } catch (error) {
+        console.log(error)
+      }
+    }
+  })
+})
 const addMediaMaterial = (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
   switch (type) {
     case MediaMaterialEnum.WINDOW:
@@ -183,10 +212,9 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
         }
       ]
     }
-    localPeerConnection = new RTCPeerConnection(serverConfig)
-    remotePeerConnection = new RTCPeerConnection(serverConfig)
+    peerConnection = new RTCPeerConnection(serverConfig)
     for (const track of event.getTracks()) {
-      localPeerConnection.addTrack(track, event)
+      peerConnection.addTrack(track, event)
     }
   } catch (error) {
     if (type === MediaMaterialEnum.WINDOW) {
@@ -203,36 +231,18 @@ const startLive = async () => {
   await createConnect()
 }
 const createConnect = async () => {
-  const localSdp = await localPeerConnection.createOffer()
-  localPeerConnection.setLocalDescription(localSdp)
-  remotePeerConnection.setRemoteDescription(localSdp)
-  const remoteSdp = await remotePeerConnection.createAnswer()
-  remotePeerConnection.setLocalDescription(remoteSdp)
-  localPeerConnection.setRemoteDescription(remoteSdp)
+  const offer = await peerConnection.createOffer()
+  await peerConnection.setLocalDescription(offer)
+  websocket.value.emit('offer', offer, '123')
 }
 const iceListenner = () => {
-  localPeerConnection.onicecandidate = (event) => {
+  peerConnection.onicecandidate = (event) => {
     console.log('I got local icecandidate info')
-    if (event.candidate) {
-      // add candidate to remote peer connection
-      remotePeerConnection.addIceCandidate(event.candidate)
+    let icecandidate = event.candidate
+    console.log(icecandidate)
+    if (icecandidate) {
+      websocket.value.emit('ice', icecandidate, '123')
     }
-  }
-  // 如果监测到本地媒体流连接到本地，将其绑定到一个video标签上输出
-  localPeerConnection.ontrack = (event) => {
-    console.log(event)
-    // localVideoRef.value.srcObject = event.streams[0];
-  }
-  remotePeerConnection.onicecandidate = (event) => {
-    console.log('I got remote icecandidate info')
-    if (event.candidate) {
-      // add candidate to local peer connection
-      localPeerConnection.addIceCandidate(event.candidate)
-    }
-  }
-  remotePeerConnection.ontrack = (event) => {
-    console.log(event)
-    localVideoRef.value.srcObject = event.streams[0] // chrome
   }
 }
 </script>
