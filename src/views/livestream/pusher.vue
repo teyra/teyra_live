@@ -52,7 +52,20 @@
           <span>{{ volume }}%</span>
         </div>
         <div class="right-content">
-          <el-button type="primary" size="large" @click="startLive">开始直播</el-button>
+          <el-button
+            type="primary"
+            size="large"
+            v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE"
+            @click="startLive"
+            >开始直播</el-button
+          >
+          <el-button
+            type="primary"
+            size="large"
+            v-else-if="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+            @click="stopLive"
+            >结束直播</el-button
+          >
         </div>
       </div>
     </div>
@@ -105,12 +118,21 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 //@ts-ignore
 import { ElMessage } from 'element-plus'
-import { MediaMaterialEnum } from '@/enums/media'
+import { LiveStreamStatusEnum, MediaMaterialEnum } from '@/enums/media'
 import { io } from 'socket.io-client'
 let message = ref('')
 let volume = ref(0)
 let materialDialogVisible = ref(false)
 let materialName = ref('')
+let timer: any = null
+let roomId = ref('123')
+let socketMessage = ref({
+  name: '' as string,
+  roomId: '' as string,
+  socketId: '' as string
+})
+let currentSocketId = ref('')
+let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection = reactive({} as RTCPeerConnection)
 interface materialItem {
@@ -131,34 +153,59 @@ watch(
 let materialList = reactive([] as materialItem[])
 let websocket = ref()
 onMounted(() => {
+  initSocket()
+})
+const sendMessage = () => {
+  websocket.value.emit('createRoom', roomId.value)
+}
+/**
+ * 初始化socket
+ */
+const initSocket = () => {
   websocket.value = io('ws://localhost:8080')
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
-  websocket.value.emit('joinRoom', '123')
-  websocket.value.on('create', (room: any) => {
-    console.log('创建或加入房间' + room)
+  websocket.value.emit('createRoom', {
+    roomId: roomId.value
   })
-  websocket.value.on('offer', async (offer: any) => {
-    console.log(offer)
-    console.log(peerConnection + 'peerConnection')
-    // 接受保存clientA的应答SDP对象
-    if (offer) {
-      const remoteDesc = new RTCSessionDescription(offer)
-      await peerConnection.setRemoteDescription(remoteDesc)
-    }
+  websocket.value.on('ownerCreate', (room: any, socketId: string) => {
+    currentSocketId.value = socketId
+    console.log('创建房间成功' + room + 'socketId' + socketId)
   })
-  websocket.value.on('ice', (candidate: any) => {
-    console.log(candidate + 'candidate')
-    if (candidate) {
-      try {
-        peerConnection.addIceCandidate(candidate)
-      } catch (error) {
-        console.log(error)
+  websocket.value.on('errorMake', (room: any, socketId: string) => {
+    console.log('创建房间失败' + room + 'socketId' + socketId)
+  })
+  let serverConfig = {
+    iceServers: [
+      {
+        urls: 'stun:stun.l.google.com:19302'
+      }
+    ]
+  }
+  peerConnection = new RTCPeerConnection(serverConfig)
+  //监听SDP offer or answer
+  websocket.value.on('offer', async (offer: RTCSessionDescriptionInit, socketId: string) => {
+    if (currentSocketId.value === socketId) {
+      if (offer) {
+        const remoteDesc = new RTCSessionDescription(offer)
+        await peerConnection.setRemoteDescription(remoteDesc)
       }
     }
   })
-})
+  //监听ICE candidates
+  websocket.value.on('ice', (candidate: RTCIceCandidate, socketId: string) => {
+    if (currentSocketId.value === socketId) {
+      if (candidate) {
+        try {
+          peerConnection.addIceCandidate(candidate)
+        } catch (error) {
+          console.log(error)
+        }
+      }
+    }
+  })
+}
 const addMediaMaterial = (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
   switch (type) {
     case MediaMaterialEnum.WINDOW:
@@ -186,7 +233,7 @@ const deleteMedia = (index: number) => {
   localVideoRef.value.srcObject = null
   volume.value = 0
 }
-// 1.获取本地媒体设备成功之后，
+// 获取本地媒体设备成功之后，
 // 创建一个新的RTCPeerConnection对象，
 // 初始化将本地音视频轨道加入到RTCPeerConnection
 const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
@@ -205,14 +252,6 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     }
     localVideoRef.value.srcObject = event
     volume.value = localVideoRef.value.volume * 100
-    let serverConfig = {
-      iceServers: [
-        {
-          urls: 'stun:stun.l.google.com:19302'
-        }
-      ]
-    }
-    peerConnection = new RTCPeerConnection(serverConfig)
     for (const track of event.getTracks()) {
       peerConnection.addTrack(track, event)
     }
@@ -226,22 +265,36 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     }
   }
 }
+/**
+ * 开始直播
+ */
 const startLive = async () => {
-  await iceListenner()
-  await createConnect()
+  await createConnectRequest()
+  liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
+  websocket.value.emit('liveStreamStatus', LiveStreamStatusEnum.ONLINE, roomId.value)
+  timer = setInterval(() => {
+    createConnectRequest()
+  }, 500)
 }
-const createConnect = async () => {
+/**
+ * 结束直播
+ */
+const stopLive = () => {
+  liveStreamStatus.value = LiveStreamStatusEnum.OFFLINE
+  websocket.value.emit('liveStreamStatus', LiveStreamStatusEnum.OFFLINE, roomId.value)
+  clearInterval(timer)
+}
+/**
+ * 发起连接请求并且监听ice
+ */
+const createConnectRequest = async () => {
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
-  websocket.value.emit('offer', offer, '123')
-}
-const iceListenner = () => {
+  websocket.value.emit('offer', offer, roomId.value, currentSocketId.value)
   peerConnection.onicecandidate = (event) => {
-    console.log('I got local icecandidate info')
     let icecandidate = event.candidate
-    console.log(icecandidate)
     if (icecandidate) {
-      websocket.value.emit('ice', icecandidate, '123')
+      websocket.value.emit('ice', icecandidate, roomId.value, currentSocketId.value)
     }
   }
 }

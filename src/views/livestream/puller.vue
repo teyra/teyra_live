@@ -2,9 +2,19 @@
   <div class="flex justify-center items-center pull-container">
     <div class="left-container flex-column">
       <div class="video-container">
+        <div class="live-info-bar opc-9 p-10 bg-white">
+          <div class="left-content">
+            <img src="@/assets/image/avatar.jpg" class="w-65 h-65 round-50" alt="" />
+            <div class="info-container">
+              <span class="username">{{ userInfo.username }}</span>
+              <span class="title">{{ liveInfo.title }}</span>
+            </div>
+          </div>
+        </div>
         <video
           ref="localVideoRef"
-          style="width: 1000px; height: 650px"
+          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+          style="width: 1000px; height: 540px"
           autoplay
           webkit-playsinline="true"
           playsinline
@@ -12,19 +22,37 @@
           x5-video-player-type="h5"
           x5-video-player-fullscreen="true"
           x5-video-orientation="portraint"
+          controls
+          muted
         ></video>
+        <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
+          <div class="title">主播还在赶来的路上。。。</div>
+          <div class="more-bar">
+            <div class="box" v-for="(item, index) in moreLiveRoomList" :key="index">
+              <img src="@/assets/image/live_cover.png" />
+              <div class="text-container">
+                <span>{{ item.name }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="setting-bar opc-9 p-10 bg-white">
-        <div class="left-content">
-          <img src="@/assets/image/avatar.jpg" class="w-65 h-65 round-50" alt="" />
+        <div v-for="(item, index) in 6" :key="index" class="gift">
+          <img src="@/assets/image/gift.avif" alt="" />
+          <span class="name">鲜花</span>
+          <span class="price">1314电池</span>
         </div>
-        <div class="right-content"></div>
       </div>
     </div>
     <div class="right-container flex-column">
       <div class="danmu-interactive p-10 round-5 w-350 bg-white">
         <div class="c-black fs-16">弹幕互动区</div>
-        <div class="content-list"></div>
+        <div class="content-list">
+          <div class="tip">
+            系统提示：哔哩哔哩直播内容及互动评论须严格遵守直播规范，严禁传播违法违规、低俗血暴、吸烟酗酒、造谣诈骗等不良有害信息。如有违规，平台将对违规直播间或账号进行相应的处罚！注意理性打赏，严禁未成年人直播或打赏。请勿轻信各类招聘征婚、代练代抽、刷钻、购买礼包码、游戏币等广告信息，且如主播在推广商品中诱导私下交易，请谨慎判断，以免上当受骗。
+          </div>
+        </div>
         <div class="send-container">
           <el-input
             v-model="message"
@@ -41,71 +69,130 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { onMounted, reactive, ref, watch } from 'vue'
 import { io } from 'socket.io-client'
+import { LiveStreamStatusEnum } from '@/enums/media'
+
+interface liveRoomItem {
+  name: string
+  iimgUrl: string
+}
+let userInfo = reactive({
+  username: 'Teyra'
+})
+let liveInfo = reactive({
+  title: '周末训练赛'
+})
+let moreLiveRoomList = reactive([
+  {
+    name: '权倾朝野-新厅驾到'
+  },
+  {
+    name: '权倾朝野-新厅驾到'
+  },
+  {
+    name: '权倾朝野-新厅驾到'
+  }
+])
 let message = ref('')
+let roomId = ref('123')
+let currentSocketId = ref('')
+let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection = reactive({} as RTCPeerConnection)
 let websocket = ref()
 onMounted(() => {
-  websocket.value = io('ws://localhost:8080')
-  websocket.value.on('connect', () => {
-    console.log('连接成功')
-  })
-  websocket.value.emit('joinRoom', '123')
-  websocket.value.on('create', (room: any) => {
-    console.log('创建或加入房间' + room)
-  })
-  let serverConfig = {
+  createPeerConnection()
+  initSocket()
+})
+const createPeerConnection = () => {
+  const serverConfig = {
     iceServers: [
       {
         urls: 'stun:stun.l.google.com:19302'
       }
     ]
   }
-  websocket.value.on('offer', async (offer: any) => {
-    console.log('get offer' + offer)
-    peerConnection = new RTCPeerConnection(serverConfig)
-    await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-    const answer = await peerConnection.createAnswer()
-    await peerConnection.setLocalDescription(answer)
-    websocket.value.emit('offer', answer,'123')
-    peerConnection.onicecandidate = (event) => {
-      console.log('I got remote icecandidate info')
-      let icecandidate = event.candidate
-      // console.log(event)
-      if (icecandidate) {
-        websocket.value.emit('ice', icecandidate,'123')
-      }
+  peerConnection = new RTCPeerConnection(serverConfig)
+  peerConnection.ontrack = (event) => {
+    console.log(event.streams[0])
+    localVideoRef.value.srcObject = event.streams[0]
+    liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
+  }
+  peerConnection.onconnectionstatechange = (event) => {
+    console.log(peerConnection.connectionState)
+  }
+  peerConnection.onicecandidate = (event) => {
+    const icecandidate = event.candidate
+    if (icecandidate) {
+      websocket.value.emit('ice', icecandidate, roomId.value)
     }
-    peerConnection.addEventListener('connectionstatechange', (event) => {
-      if (peerConnection.connectionState === 'connected') {
-        // Peers connected!
-      }
-    })
-    peerConnection.addEventListener('track', async (event) => {
-      console.log(event)
-    })
-    peerConnection.ontrack = (event) => {
-      console.log(event + 'ontrack')
-      // localVideoRef.value.srcObject = event.streams[0]
+  }
+}
+const initSocket = () => {
+  websocket.value = io('ws://localhost:8080')
+  websocket.value.on('connect', () => {
+    console.log('连接成功')
+  })
+  websocket.value.emit('joinRoom', {
+    roomId: roomId.value
+  })
+
+  websocket.value.on('userJoined', (room: string, socketId: string) => {
+    console.log('用户加入房间' + room + 'socketId' + socketId)
+    currentSocketId.value = socketId
+  })
+  websocket.value.on('otherJoined', (room: string, name: string, socketId: string) => {
+    console.log('用户加入房间' + room + 'name' + name + 'socketId' + socketId)
+  })
+  websocket.value.on('liveStreamStatus', (status: LiveStreamStatusEnum) => {
+    console.log('liveStreamStatus' + status)
+    if (status === LiveStreamStatusEnum.ONLINE) {
+      liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
+      console.log('开播啦')
+      console.log(peerConnection.connectionState)
+    } else if (status === LiveStreamStatusEnum.OFFLINE) {
+      liveStreamStatus.value = LiveStreamStatusEnum.OFFLINE
+      console.log('下播啦')
     }
   })
-  websocket.value.on('ice', (candidate: any) => {
-    console.log(candidate + 'candidate')
-    if (candidate) {
-      try {
-        peerConnection.addIceCandidate(candidate)
-      } catch (error) {
-        console.log(error)
+  websocket.value.on('message', async (roomId: any, data: any) => {
+    // if (data.msg.type === 'offer' && data.socketId === socketId) {
+    //   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.msg))
+    //   const answer = await peerConnection.createAnswer()
+    //   await peerConnection.setLocalDescription(answer)
+    //   websocket.value.emit('offer', answer, socketId)
+    // }
+    // if (data.msg.type === 'candidate' && data.socketId === socketId) {
+    //   if (data.msg.data) {
+    //     try {
+    //       peerConnection.addIceCandidate(data.msg.data)
+    //     } catch (error) {
+    //       console.log(error)
+    //     }
+    //   }
+    // }
+  })
+  websocket.value.on('offer', async (offer: RTCSessionDescriptionInit, socketId: string) => {
+    if (currentSocketId.value === socketId) {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
+      const answer = await peerConnection.createAnswer()
+      await peerConnection.setLocalDescription(answer)
+      websocket.value.emit('offer', answer, roomId.value, socketId)
+    }
+  })
+  websocket.value.on('ice', (candidate: RTCIceCandidate, socketId: string) => {
+    if (currentSocketId.value === socketId) {
+      if (candidate) {
+        try {
+          peerConnection.addIceCandidate(candidate)
+        } catch (error) {
+          console.log(error)
+        }
       }
     }
   })
-})
-// const videoCall = async () => {
-//   await iceListenner()
-// }
-const iceListenner = () => {}
+}
 </script>
 <style scoped lang="scss">
 .pull-container {
@@ -120,7 +207,85 @@ const iceListenner = () => {}
     .video-container {
       position: relative;
       display: flex;
-      background: #000000;
+      flex-direction: column;
+      width: 1000px;
+      height: 630px;
+      background: #131212;
+      border-top-left-radius: 5px;
+      border-top-right-radius: 5px;
+      .live-info-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        .left-content {
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+          .info-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            margin-left: 10px;
+            .username {
+              font-size: 16px;
+              font-weight: 500;
+            }
+            .title {
+              font-size: 14px;
+            }
+          }
+        }
+      }
+      .more-container {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        .title {
+          font-size: 28px;
+          color: rgb(170, 170, 170);
+          text-align: center;
+          margin-bottom: 20px;
+        }
+        .more-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        }
+        .box {
+          border-radius: 6px;
+          color: #ffffff;
+          width: 192px;
+          height: 110px;
+          margin: 10px;
+          cursor: pointer;
+          position: relative;
+          overflow: hidden;
+          .text-container {
+            font-size: 14px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            display: flex;
+            background: linear-gradient(-180deg, rgba(0, 0, 0, 0) 0%, rgb(0, 0, 0) 100%);
+            span {
+              margin-bottom: 10px;
+              margin-left: 10px;
+            }
+          }
+          img {
+            width: 192px;
+            height: 108px;
+            border-radius: 4px;
+          }
+        }
+      }
     }
 
     .setting-bar {
@@ -129,31 +294,39 @@ const iceListenner = () => {}
       align-items: center;
       border-bottom-left-radius: 5px;
       border-bottom-right-radius: 5px;
-      .left-content {
+      padding: 10px 30px;
+      .gift {
         display: flex;
-        justify-content: flex-start;
+        flex-direction: column;
         align-items: center;
-        img {
-          margin-right: 10px;
+        .name {
+          font-size: 14px;
+          color: #000;
         }
-      }
-      .right-content {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
+        .price {
+          font-size: 12px;
+          color: #645f5f;
+        }
       }
     }
   }
   .right-container {
     opacity: 0.9;
     justify-content: space-between;
-    height: 735px;
+    height: 740px;
     margin-left: 10px;
     .danmu-interactive {
       height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      .content-list {
+        height: 600px;
+        .tip {
+          font-size: 14px;
+          color: var(--el-color-primary);
+        }
+      }
       .send-container {
         display: flex;
         justify-content: space-between;
