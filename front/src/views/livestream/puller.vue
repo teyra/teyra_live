@@ -72,6 +72,7 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import { io } from 'socket.io-client'
 import { LiveStreamStatusEnum } from '@/enums/media'
+import { webRtcSrsPull } from '@/api/srs'
 
 interface liveRoomItem {
   name: string
@@ -102,35 +103,46 @@ let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection = reactive({} as RTCPeerConnection)
 let websocket = ref()
 onMounted(() => {
-  createPeerConnection()
-  initSocket()
+  init()
 })
-const createPeerConnection = () => {
-  const serverConfig = {
-    iceServers: [
-      {
-        urls: 'stun:stun.l.google.com:19302'
-      }
-    ]
-  }
-  peerConnection = new RTCPeerConnection(serverConfig)
-  peerConnection.ontrack = (event) => {
-    console.log(event.streams[0])
-    localVideoRef.value.srcObject = event.streams[0]
-    liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
-  }
-  peerConnection.onconnectionstatechange = (event) => {
-    console.log(peerConnection.connectionState)
-  }
-  peerConnection.onicecandidate = (event) => {
-    const icecandidate = event.candidate
-    if (icecandidate) {
-      websocket.value.emit('ice', icecandidate, roomId.value)
-    }
-  }
+const init = async () => {
+  await createPeerConnection()
+  initSocket()
 }
+/**
+ * 发起webRTCSrs连接
+ */
+const createPeerConnection = async () => {
+  peerConnection = new RTCPeerConnection()
+  peerConnection.addEventListener('connectionstatechange', (event) => {
+    console.log(peerConnection.connectionState)
+    if (peerConnection.connectionState === 'connected') {
+      // Peers connected!
+    }
+  })
+  peerConnection.ontrack = (event) => {
+    console.log('23213213')
+
+    localVideoRef.value.srcObject = event.streams[0]
+  }
+  peerConnection.addTransceiver('audio', { direction: 'recvonly' })
+  peerConnection.addTransceiver('video', { direction: 'recvonly' })
+  const offer = await peerConnection.createOffer()
+  await peerConnection.setLocalDescription(offer)
+  const session: any = await webRtcSrsPull({
+    api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/play/',
+    streamurl: 'webrtc://localhost/live/livestream/123',
+    sdp: offer.sdp
+  })
+  await peerConnection.setRemoteDescription(
+    new RTCSessionDescription({ type: 'answer', sdp: session.sdp })
+  )
+}
+/**
+ * 初始化socket
+ */
 const initSocket = () => {
-  websocket.value = io('ws://localhost:8080')
+  websocket.value = io('ws://localhost:81')
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
@@ -154,42 +166,6 @@ const initSocket = () => {
     } else if (status === LiveStreamStatusEnum.OFFLINE) {
       liveStreamStatus.value = LiveStreamStatusEnum.OFFLINE
       console.log('下播啦')
-    }
-  })
-  websocket.value.on('message', async (roomId: any, data: any) => {
-    // if (data.msg.type === 'offer' && data.socketId === socketId) {
-    //   await peerConnection.setRemoteDescription(new RTCSessionDescription(data.msg))
-    //   const answer = await peerConnection.createAnswer()
-    //   await peerConnection.setLocalDescription(answer)
-    //   websocket.value.emit('offer', answer, socketId)
-    // }
-    // if (data.msg.type === 'candidate' && data.socketId === socketId) {
-    //   if (data.msg.data) {
-    //     try {
-    //       peerConnection.addIceCandidate(data.msg.data)
-    //     } catch (error) {
-    //       console.log(error)
-    //     }
-    //   }
-    // }
-  })
-  websocket.value.on('offer', async (offer: RTCSessionDescriptionInit, socketId: string) => {
-    if (currentSocketId.value === socketId) {
-      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer))
-      const answer = await peerConnection.createAnswer()
-      await peerConnection.setLocalDescription(answer)
-      websocket.value.emit('offer', answer, roomId.value, socketId)
-    }
-  })
-  websocket.value.on('ice', (candidate: RTCIceCandidate, socketId: string) => {
-    if (currentSocketId.value === socketId) {
-      if (candidate) {
-        try {
-          peerConnection.addIceCandidate(candidate)
-        } catch (error) {
-          console.log(error)
-        }
-      }
     }
   })
 }

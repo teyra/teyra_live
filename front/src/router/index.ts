@@ -21,6 +21,11 @@ const router = createRouter({
       path: '/live-pull',
       name: 'LivePull',
       component: () => import('@/views/livestream/puller.vue')
+    },
+    {
+      path: '/meeting',
+      name: 'meeting',
+      component: () => import('@/views/mediaSoup/meeting.vue')
     }
   ]
 })

@@ -120,21 +120,23 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { LiveStreamStatusEnum, MediaMaterialEnum } from '@/enums/media'
 import { io } from 'socket.io-client'
+import { webRtcSrsPublish } from '@/api/srs'
 let message = ref('')
 let volume = ref(0)
 let materialDialogVisible = ref(false)
 let materialName = ref('')
-let timer: any = null
 let roomId = ref('123')
+let isCreateConnection = ref(false)
 let socketMessage = ref({
   name: '' as string,
   roomId: '' as string,
   socketId: '' as string
 })
 let currentSocketId = ref('')
+let mediaStream: any = ref(null)
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
-let peerConnection = reactive({} as RTCPeerConnection)
+let peerConnection: any = reactive({} as RTCPeerConnection)
 interface materialItem {
   name: string
 }
@@ -162,7 +164,7 @@ const sendMessage = () => {
  * 初始化socket
  */
 const initSocket = () => {
-  websocket.value = io('ws://localhost:8080')
+  websocket.value = io('ws://localhost:81')
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
@@ -175,35 +177,6 @@ const initSocket = () => {
   })
   websocket.value.on('errorMake', (room: any, socketId: string) => {
     console.log('创建房间失败' + room + 'socketId' + socketId)
-  })
-  let serverConfig = {
-    iceServers: [
-      {
-        urls: 'stun:stun.l.google.com:19302'
-      }
-    ]
-  }
-  peerConnection = new RTCPeerConnection(serverConfig)
-  //监听SDP offer or answer
-  websocket.value.on('offer', async (offer: RTCSessionDescriptionInit, socketId: string) => {
-    if (currentSocketId.value === socketId) {
-      if (offer) {
-        const remoteDesc = new RTCSessionDescription(offer)
-        await peerConnection.setRemoteDescription(remoteDesc)
-      }
-    }
-  })
-  //监听ICE candidates
-  websocket.value.on('ice', (candidate: RTCIceCandidate, socketId: string) => {
-    if (currentSocketId.value === socketId) {
-      if (candidate) {
-        try {
-          peerConnection.addIceCandidate(candidate)
-        } catch (error) {
-          console.log(error)
-        }
-      }
-    }
   })
 }
 const addMediaMaterial = (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
@@ -233,9 +206,6 @@ const deleteMedia = (index: number) => {
   localVideoRef.value.srcObject = null
   volume.value = 0
 }
-// 获取本地媒体设备成功之后，
-// 创建一个新的RTCPeerConnection对象，
-// 初始化将本地音视频轨道加入到RTCPeerConnection
 const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
   try {
     let event: any
@@ -252,9 +222,7 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     }
     localVideoRef.value.srcObject = event
     volume.value = localVideoRef.value.volume * 100
-    for (const track of event.getTracks()) {
-      peerConnection.addTrack(track, event)
-    }
+    mediaStream.value = event
   } catch (error) {
     if (type === MediaMaterialEnum.WINDOW) {
       ElMessage.error('无法获取屏幕')
@@ -265,38 +233,52 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     }
   }
 }
+const checkPeerConnection = async () => {}
 /**
  * 开始直播
  */
 const startLive = async () => {
-  await createConnectRequest()
+  await createPeerConnection()
   liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
-  websocket.value.emit('liveStreamStatus', LiveStreamStatusEnum.ONLINE, roomId.value)
-  timer = setInterval(() => {
-    createConnectRequest()
-  }, 500)
+  websocket.value.emit('liveStreamStatus', {
+    liveStreamStatus: LiveStreamStatusEnum.ONLINE,
+    roomId: roomId.value
+  })
 }
 /**
  * 结束直播
  */
 const stopLive = () => {
   liveStreamStatus.value = LiveStreamStatusEnum.OFFLINE
-  websocket.value.emit('liveStreamStatus', LiveStreamStatusEnum.OFFLINE, roomId.value)
-  clearInterval(timer)
+  websocket.value.emit('liveStreamStatus', {
+    liveStreamStatus: LiveStreamStatusEnum.OFFLINE,
+    roomId: roomId.value
+  })
 }
 /**
- * 发起连接请求并且监听ice
+ * 发起webRTCSrs连接
  */
-const createConnectRequest = async () => {
-  const offer = await peerConnection.createOffer()
-  await peerConnection.setLocalDescription(offer)
-  websocket.value.emit('offer', offer, roomId.value, currentSocketId.value)
-  peerConnection.onicecandidate = (event) => {
-    let icecandidate = event.candidate
-    if (icecandidate) {
-      websocket.value.emit('ice', icecandidate, roomId.value, currentSocketId.value)
+const createPeerConnection = async () => {
+  peerConnection = new RTCPeerConnection()
+  peerConnection.addTransceiver('audio', { direction: 'sendonly' })
+  peerConnection.addTransceiver('video', { direction: 'sendonly' })
+  if (mediaStream.value) {
+    for (const track of mediaStream.value.getTracks()) {
+      peerConnection.addTrack(track, mediaStream)
     }
   }
+
+  const offer = await peerConnection.createOffer()
+  await peerConnection.setLocalDescription(offer)
+  const session: any = await webRtcSrsPublish({
+    api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/',
+    streamurl: 'webrtc://localhost/live/livestream/123',
+    sdp: offer.sdp
+  })
+  await peerConnection.setRemoteDescription(
+    new RTCSessionDescription({ type: 'answer', sdp: session.sdp })
+  )
+  isCreateConnection.value = true
 }
 </script>
 <style scoped lang="scss">
