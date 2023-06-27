@@ -12,20 +12,10 @@
             </div>
           </div>
         </div>
-        <video
-          ref="localVideoRef"
-          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-          style="width: 1000px; height: 540px"
-          autoplay
-          webkit-playsinline="true"
-          playsinline
-          x-webkit-airplay="allow"
-          x5-video-player-type="h5"
-          x5-video-player-fullscreen="true"
-          x5-video-orientation="portraint"
-          controls
-          muted
-        ></video>
+        <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+          style="width: 1000px; height: 540px" autoplay webkit-playsinline="true" playsinline x-webkit-airplay="allow"
+          x5-video-player-type="h5" x5-video-player-fullscreen="true" x5-video-orientation="portraint" controls
+          muted></video>
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -55,13 +45,7 @@
           </div>
         </div>
         <div class="send-container">
-          <el-input
-            v-model="message"
-            placeholder="和主播聊聊吧~"
-            class="small-input"
-            maxlength="20"
-            show-word-limit
-          ></el-input>
+          <el-input v-model="message" placeholder="和主播聊聊吧~" class="small-input" maxlength="20" show-word-limit></el-input>
           <el-button type="primary">发送</el-button>
         </div>
       </div>
@@ -116,10 +100,13 @@ const init = async () => {
   const {
     query: { id }
   } = route
-  if (id) await getLiveRoomDetail(id)
-  await getLiveStatus(id)
-  await createPeerConnection()
-  initSocket()
+  if (id) {
+    await getLiveRoomDetail(id)
+    await getLiveStatus(id)
+    await createPeerConnection()
+    initSocket()
+  }
+
 }
 const getLiveStatus = async (id: any) => {
   const { data } = await getLiveStatusApi(id)
@@ -195,6 +182,7 @@ const initSocket = () => {
   background-image: url('@/assets/image/pull_bg.webp');
   background-repeat: no-repeat;
   background-size: cover;
+
   .left-container {
     .video-container {
       position: relative;
@@ -205,31 +193,37 @@ const initSocket = () => {
       background: #131212;
       border-top-left-radius: 5px;
       border-top-right-radius: 5px;
+
       .live-info-bar {
         display: flex;
         justify-content: space-between;
         align-items: center;
         border-top-left-radius: 5px;
         border-top-right-radius: 5px;
+
         .left-content {
           display: flex;
           justify-content: flex-start;
           align-items: center;
+
           .info-container {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             margin-left: 10px;
+
             .username {
               font-size: 16px;
               font-weight: 500;
             }
+
             .title {
               font-size: 14px;
             }
           }
         }
       }
+
       .more-container {
         position: absolute;
         top: 50%;
@@ -238,17 +232,20 @@ const initSocket = () => {
         display: flex;
         flex-direction: column;
         align-items: center;
+
         .title {
           font-size: 28px;
           color: rgb(170, 170, 170);
           text-align: center;
           margin-bottom: 20px;
         }
+
         .more-bar {
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
+
         .box {
           border-radius: 6px;
           color: #ffffff;
@@ -258,6 +255,7 @@ const initSocket = () => {
           cursor: pointer;
           position: relative;
           overflow: hidden;
+
           .text-container {
             font-size: 14px;
             position: absolute;
@@ -266,11 +264,13 @@ const initSocket = () => {
             right: 0;
             display: flex;
             background: linear-gradient(-180deg, rgba(0, 0, 0, 0) 0%, rgb(0, 0, 0) 100%);
+
             span {
               margin-bottom: 10px;
               margin-left: 10px;
             }
           }
+
           img {
             width: 192px;
             height: 108px;
@@ -287,14 +287,17 @@ const initSocket = () => {
       border-bottom-left-radius: 5px;
       border-bottom-right-radius: 5px;
       padding: 10px 30px;
+
       .gift {
         display: flex;
         flex-direction: column;
         align-items: center;
+
         .name {
           font-size: 14px;
           color: #000;
         }
+
         .price {
           font-size: 12px;
           color: #645f5f;
@@ -302,23 +305,28 @@ const initSocket = () => {
       }
     }
   }
+
   .right-container {
     opacity: 0.9;
     justify-content: space-between;
     height: 740px;
     margin-left: 10px;
+
     .danmu-interactive {
       height: 100%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+
       .content-list {
         height: 600px;
+
         .tip {
           font-size: 14px;
           color: var(--el-color-primary);
         }
       }
+
       .send-container {
         display: flex;
         justify-content: space-between;
@@ -327,6 +335,5 @@ const initSocket = () => {
       }
     }
   }
-}
-</style>
+}</style>
 @/api/modules/srs

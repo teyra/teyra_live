@@ -19,7 +19,6 @@ export class LiveroomGateway {
   ) {
     const { roomId } = createMessageDto;
     client.join(roomId);
-    console.log(client);
     this.server.to(roomId).emit('otherJoined');
     // client.to(roomId).emit('otherJoined');
     return {
