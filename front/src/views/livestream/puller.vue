@@ -1,13 +1,14 @@
 <template>
   <div class="flex justify-center items-center pull-container">
+    <Header></Header>
     <div class="left-container flex-column">
       <div class="video-container">
         <div class="live-info-bar opc-9 p-10 bg-white">
           <div class="left-content">
             <img src="@/assets/image/avatar.jpg" class="w-65 h-65 round-50" alt="" />
             <div class="info-container">
-              <span class="username">{{ userInfo.username }}</span>
-              <span class="title">{{ liveInfo.title }}</span>
+              <span class="username">{{ liveInfo.name }}</span>
+              <span class="title">{{ liveInfo.description }}</span>
             </div>
           </div>
         </div>
@@ -72,17 +73,18 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import { io } from 'socket.io-client'
 import { LiveStreamStatusEnum } from '@/enums/media'
-import { webRtcSrsPull } from '@/api/srs'
-
+import { webRtcSrsPullApi } from '@/api/modules/srs'
+import Header from '@/components/Header.vue'
+import { getLiveRoomDetailApi, getLiveStatusApi } from '@/api/modules/liveroom'
+import { useRoute } from 'vue-router'
+const route = useRoute()
 interface liveRoomItem {
   name: string
   iimgUrl: string
 }
-let userInfo = reactive({
-  username: 'Teyra'
-})
 let liveInfo = reactive({
-  title: '周末训练赛'
+  name: '',
+  description: ''
 })
 let moreLiveRoomList = reactive([
   {
@@ -105,9 +107,23 @@ let websocket = ref()
 onMounted(() => {
   init()
 })
+const getLiveRoomDetail = async (id: any) => {
+  const { data } = await getLiveRoomDetailApi(id)
+  liveInfo.name = data.name
+  liveInfo.description = data.description
+}
 const init = async () => {
+  const {
+    query: { id }
+  } = route
+  if (id) await getLiveRoomDetail(id)
+  await getLiveStatus(id)
   await createPeerConnection()
   initSocket()
+}
+const getLiveStatus = async (id: any) => {
+  const { data } = await getLiveStatusApi(id)
+  liveStreamStatus.value = data
 }
 /**
  * 发起webRTCSrs连接
@@ -122,14 +138,14 @@ const createPeerConnection = async () => {
   })
   peerConnection.ontrack = (event) => {
     console.log('23213213')
-
+    // liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
     localVideoRef.value.srcObject = event.streams[0]
   }
   peerConnection.addTransceiver('audio', { direction: 'recvonly' })
   peerConnection.addTransceiver('video', { direction: 'recvonly' })
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
-  const session: any = await webRtcSrsPull({
+  const session: any = await webRtcSrsPullApi({
     api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/play/',
     streamurl: 'webrtc://localhost/live/livestream/123',
     sdp: offer.sdp
@@ -154,8 +170,8 @@ const initSocket = () => {
     console.log('用户加入房间' + room + 'socketId' + socketId)
     currentSocketId.value = socketId
   })
-  websocket.value.on('otherJoined', (room: string, name: string, socketId: string) => {
-    console.log('用户加入房间' + room + 'name' + name + 'socketId' + socketId)
+  websocket.value.on('otherJoined', () => {
+    console.log('用户加入房间')
   })
   websocket.value.on('liveStreamStatus', (status: LiveStreamStatusEnum) => {
     console.log('liveStreamStatus' + status)
@@ -313,3 +329,4 @@ const initSocket = () => {
   }
 }
 </style>
+@/api/modules/srs

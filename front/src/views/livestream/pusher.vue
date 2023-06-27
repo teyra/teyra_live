@@ -120,19 +120,15 @@ import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { LiveStreamStatusEnum, MediaMaterialEnum } from '@/enums/media'
 import { io } from 'socket.io-client'
-import { webRtcSrsPublish } from '@/api/srs'
+import { webRtcSrsPublishApi } from '@/api/modules/srs'
+import { getLiveRoomDetailApi } from '@/api/modules/liveroom'
+import { useRoute } from 'vue-router'
+const route = useRoute()
 let message = ref('')
 let volume = ref(0)
 let materialDialogVisible = ref(false)
 let materialName = ref('')
-let roomId = ref('123')
-let isCreateConnection = ref(false)
-let socketMessage = ref({
-  name: '' as string,
-  roomId: '' as string,
-  socketId: '' as string
-})
-let currentSocketId = ref('')
+let roomId = ref('')
 let mediaStream: any = ref(null)
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
@@ -155,8 +151,21 @@ watch(
 let materialList = reactive([] as materialItem[])
 let websocket = ref()
 onMounted(() => {
-  initSocket()
+  init()
 })
+const init = async () => {
+  const {
+    query: { id }
+  } = route
+  if (id) await getLiveRoomDetail(id)
+  initSocket()
+}
+const getLiveRoomDetail = async (id: any) => {
+  const { data } = await getLiveRoomDetailApi(id)
+  roomId.value = data._id
+  // liveInfo.name = data.name
+  // liveInfo.description = data.description
+}
 const sendMessage = () => {
   websocket.value.emit('createRoom', roomId.value)
 }
@@ -168,16 +177,21 @@ const initSocket = () => {
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
-  websocket.value.emit('createRoom', {
-    roomId: roomId.value
-  })
-  websocket.value.on('ownerCreate', (room: any, socketId: string) => {
-    currentSocketId.value = socketId
-    console.log('创建房间成功' + room + 'socketId' + socketId)
-  })
-  websocket.value.on('errorMake', (room: any, socketId: string) => {
-    console.log('创建房间失败' + room + 'socketId' + socketId)
-  })
+  websocket.value.emit(
+    'joinRoom',
+    {
+      roomId: roomId.value
+    },
+    ({ room }: any) => {
+      console.log('加入房间成功' + room)
+    }
+  )
+  // websocket.value.on('ownerCreate', ({ room }: any) => {
+  //   console.log('创建房间成功' + room)
+  // })
+  // websocket.value.on('errorMake', (room: any, socketId: string) => {
+  //   console.log('创建房间失败' + room + 'socketId' + socketId)
+  // })
 }
 const addMediaMaterial = (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
   switch (type) {
@@ -223,6 +237,7 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     localVideoRef.value.srcObject = event
     volume.value = localVideoRef.value.volume * 100
     mediaStream.value = event
+    await createPeerConnection()
   } catch (error) {
     if (type === MediaMaterialEnum.WINDOW) {
       ElMessage.error('无法获取屏幕')
@@ -238,7 +253,7 @@ const checkPeerConnection = async () => {}
  * 开始直播
  */
 const startLive = async () => {
-  await createPeerConnection()
+  // await createPeerConnection()
   liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
   websocket.value.emit('liveStreamStatus', {
     liveStreamStatus: LiveStreamStatusEnum.ONLINE,
@@ -264,13 +279,13 @@ const createPeerConnection = async () => {
   peerConnection.addTransceiver('video', { direction: 'sendonly' })
   if (mediaStream.value) {
     for (const track of mediaStream.value.getTracks()) {
-      peerConnection.addTrack(track, mediaStream)
+      peerConnection.addTrack(track, mediaStream.value)
     }
   }
 
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
-  const session: any = await webRtcSrsPublish({
+  const session: any = await webRtcSrsPublishApi({
     api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/',
     streamurl: 'webrtc://localhost/live/livestream/123',
     sdp: offer.sdp
@@ -278,7 +293,6 @@ const createPeerConnection = async () => {
   await peerConnection.setRemoteDescription(
     new RTCSessionDescription({ type: 'answer', sdp: session.sdp })
   )
-  isCreateConnection.value = true
 }
 </script>
 <style scoped lang="scss">
@@ -393,3 +407,4 @@ const createPeerConnection = async () => {
   }
 }
 </style>
+@/api/modules/srs
