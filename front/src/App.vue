@@ -10,6 +10,7 @@ onMounted(() => {
   document.body.style.setProperty('--el-color-primary-light-7', '#FF6699')
   document.body.style.setProperty('--el-color-primary-light-8', '#FFFFFF')
   document.body.style.setProperty('--el-color-primary-light-9', '#FFFFFF')
+  document.body.style.setProperty('--el-border-radius-small', '10px')
 })
 </script>
 
