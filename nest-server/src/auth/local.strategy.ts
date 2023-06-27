@@ -1,6 +1,6 @@
 import { PassportStrategy } from '@nestjs/passport';
 import { Strategy, IStrategyOptions } from 'passport-local';
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { compareSync } from 'bcryptjs';
 import { Model } from 'mongoose';
 import { User } from '../user/entities/user.entity';
@@ -18,11 +18,11 @@ export class LocalStrategy extends PassportStrategy(Strategy) {
   async validate(username: string, password: string) {
     const user = await this.userModel.findOne({ username }).select('+password');
     if (!user) {
-      throw new HttpException('用户不存在', 201);
+      throw new UnauthorizedException('用户不存在');
     }
     let valid = compareSync(password, user.password);
     if (!valid) {
-      throw new HttpException('密码不正确', 201);
+      throw new UnauthorizedException('密码不正确');
     }
     return user;
   }

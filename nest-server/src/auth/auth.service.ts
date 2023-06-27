@@ -1,4 +1,4 @@
-import { HttpException, Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { User } from '../user/entities/user.entity';
 import { LoginDto } from './dto/login.dto';
@@ -20,7 +20,7 @@ export class AuthService {
     private userModel: ReturnModelType<typeof User>,
     private readonly jwtService: JwtService,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
   async login(loginDto: LoginDto) {
     const { username, password } = loginDto;
     const user = await this.userModel.findOne({ username }).select('+password');
@@ -35,7 +35,7 @@ export class AuthService {
     } else {
       let valid = compareSync(password, user.password);
       if (!valid) {
-        throw new HttpException('密码不正确', 201);
+        throw new UnauthorizedException('密码不正确');
       }
       const payload = { sub: user._id };
       const token = this.jwtService.sign(payload);
@@ -51,12 +51,12 @@ export class AuthService {
     if (sms && sms === '123456') {
       const user = await this.userModel.findOne({ mobile });
       if (user) {
-        throw new HttpException('用户已注册', 201);
+        throw new UnauthorizedException('用户已注册');
       } else {
         return await this.userModel.create({ username, mobile, password });
       }
     } else {
-      throw new HttpException('验证码不正确', 201);
+      throw new UnauthorizedException('验证码不正确');
     }
   }
   async logOut(user) {

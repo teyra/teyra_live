@@ -18,7 +18,7 @@ import { DocumentType } from '@typegoose/typegoose';
 
 @Controller('liveroom')
 export class LiveroomController {
-  constructor(private readonly liveroomService: LiveroomService) {}
+  constructor(private readonly liveroomService: LiveroomService) { }
   @Post('add')
   @UseGuards(AuthGuard('jwt'))
   create(
@@ -29,6 +29,7 @@ export class LiveroomController {
   }
 
   @Get('status/:id')
+  @UseGuards(AuthGuard('jwt'))
   getLiveStatus(@Param('id') id: string) {
     return this.liveroomService.getLiveStatus(id);
   }
@@ -39,6 +40,12 @@ export class LiveroomController {
     return this.liveroomService.findOne(id);
   }
 
+  @Get('my:id')
+  @UseGuards(AuthGuard('jwt'))
+  findMy(@Param('id') id: string) {
+    console.log('12313132');
+    // return this.liveroomService.findMy(user);
+  }
   @Patch(':id')
   update(
     @Param('id') id: string,

@@ -11,7 +11,7 @@ export class LiveroomService {
     @Inject(Liveroom.name)
     private liveRoomModel: ReturnModelType<typeof Liveroom>,
     private readonly redisService: RedisService,
-  ) {}
+  ) { }
   async create(createLiveroomDto: CreateLiveroomDto, user: DocumentType<User>) {
     const { name, description } = createLiveroomDto;
     const liveroom = await this.liveRoomModel.create({
@@ -31,7 +31,12 @@ export class LiveroomService {
     const liveroom = await this.liveRoomModel.findById(id);
     return liveroom;
   }
-
+  async findMy(user: DocumentType<User>) {
+    // console.log(user);
+    // const myLiveroom = await this.liveRoomModel.findOne({ user })
+    // console.log(myLiveroom);
+    // return myLiveroom;
+  }
   update(id: number, updateLiveroomDto: UpdateLiveroomDto) {
     return `This action updates a #${id} liveroom`;
   }

@@ -1,6 +1,7 @@
 import { HttpCodeEnum } from '@/enums/httpCode'
-import router from '@/router'
 import axios from 'axios'
+
+import { ElMessage } from 'element-plus'
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 1000
@@ -32,9 +33,10 @@ instance.interceptors.response.use(
     // 对响应错误做点什么
     if (error.response.data.code === HttpCodeEnum.OVERDUE) {
       localStorage.clear()
-      const path = '/login?redirect=' + window.location.pathname
-      return router.replace(path)
+      // const path = '/login?redirect=' + window.location.pathname
+      // return router.replace(path)
     }
+    ElMessage.error(error.response.data.message)
     return Promise.reject(error)
   }
 )

@@ -9,7 +9,13 @@ export const createLiveRoomApi = (data: LiveRoom.createLiveRoomForm) => {
 }
 export const getLiveRoomDetailApi = (id: string) => {
   return http({
-    url: `/liveroom/${id}`,
+    url: `/liveroom/detail/${id}`,
+    method: 'get'
+  })
+}
+export const getMyLiveRoomApi = (id = 1) => {
+  return http({
+    url: `/liveroom/my/${id}`,
     method: 'get'
   })
 }
