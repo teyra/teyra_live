@@ -23,9 +23,13 @@
         </el-form-item>
       </el-form>
       <template #footer>
-        <span class="dialog-footer">
+        <div>
+          <div style="display: flex; justify-content: space-between">
+            <img src="@/assets/image/login1.png" width="100" height="100" alt="" />
+            <img src="@/assets/image/login2.png" width="100" height="100" alt="" />
+          </div>
           <el-button @click="login" type="primary">登录</el-button>
-        </span>
+        </div>
       </template>
     </el-dialog>
   </div>
