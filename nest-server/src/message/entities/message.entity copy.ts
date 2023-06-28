@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { prop, Ref } from '@typegoose/typegoose';
-import { Liveroom } from 'src/liveroom/entities/liveroom.entity';
+import { Group } from 'src/group/entities/group.entity';
 import { User } from 'src/user/entities/user.entity';
 export enum MESSAGE_TYPE {
   TEXT = 1, //文本
@@ -30,7 +30,7 @@ export class Message {
   @prop({ ref: 'User' })
   @ApiProperty({ description: '发送人' })
   user: Ref<User>;
-  @prop({ ref: 'Liveroom' })
-  @ApiProperty({ description: '直播间' })
-  liveRoom: Ref<Liveroom>;
+  @prop({ ref: 'Group' })
+  @ApiProperty({ description: '聊天群' })
+  group: Ref<Group>;
 }

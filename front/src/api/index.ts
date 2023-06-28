@@ -1,6 +1,5 @@
 import { HttpCodeEnum } from '@/enums/httpCode'
 import axios from 'axios'
-
 import { ElMessage } from 'element-plus'
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
@@ -9,6 +8,11 @@ const instance = axios.create({
 // 添加请求拦截器
 instance.interceptors.request.use(
   function (config) {
+    const timestamp = new Date().getTime()
+    config.params = {
+      ...config.params,
+      _t: timestamp
+    }
     if (config.baseURL === import.meta.env.VITE_API_URL) {
       const token = localStorage.getItem('token')
       if (token) {

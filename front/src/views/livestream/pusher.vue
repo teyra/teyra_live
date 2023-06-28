@@ -45,11 +45,34 @@
       <div class="setting-bar opc-9 p-10 bg-white">
         <div class="left-content">
           <img src="@/assets/image/avatar.jpg" class="w-65 h-65 round-50" alt="" />
-          <el-icon :size="20">
-            <i-ep-microphone />
-          </el-icon>
-          <el-slider v-model="volume" style="width: 200px" class="slider" />
-          <span>{{ volume }}%</span>
+          <div class="container">
+            <div class="title-content">
+              <div class="label-container" v-if="!editTitleVisible">
+                <span class="title">{{ liveInfo.title }}</span>
+                <el-icon :size="20" @click="editTitleVisible = true">
+                  <i-ep-edit />
+                </el-icon>
+              </div>
+              <div class="edit-title" v-if="editTitleVisible">
+                <el-input
+                  v-model="liveInfo.title"
+                  class="input"
+                  maxlength="15"
+                  show-word-limit
+                  placeholder="请说点什么吧"
+                ></el-input>
+                <el-button @click="confirmTitle" type="primary" size="small">确定</el-button>
+                <el-button @click="cancelTitle" size="small">取消</el-button>
+              </div>
+            </div>
+            <div class="volume">
+              <el-icon :size="20">
+                <i-ep-microphone />
+              </el-icon>
+              <el-slider v-model="volume" style="width: 200px" class="slider" />
+              <span>{{ volume }}%</span>
+            </div>
+          </div>
         </div>
         <div class="right-content">
           <el-button
@@ -86,7 +109,13 @@
       </div>
       <div class="danmu-interactive p-10 round-5 w-350 bg-white">
         <div class="c-black fs-16">弹幕互动区</div>
-        <div class="content-list"></div>
+        <div class="content-list">
+          <div v-for="(item, index) in messageList" :key="index" class="content-item">
+            <span>{{ item.roleName }}</span>
+            <span class="username"> {{ item.username }} :</span>
+            <span class="text">{{ item.text }}</span>
+          </div>
+        </div>
         <div class="send-container">
           <el-input
             v-model="message"
@@ -95,7 +124,7 @@
             maxlength="20"
             show-word-limit
           ></el-input>
-          <el-button type="primary">发送</el-button>
+          <el-button type="primary" @click="sendMessage">发送</el-button>
         </div>
       </div>
     </div>
@@ -116,19 +145,28 @@
 
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
-//@ts-ignore
 import { ElMessage } from 'element-plus'
 import { LiveStreamStatusEnum, MediaMaterialEnum } from '@/enums/media'
 import { io } from 'socket.io-client'
 import { webRtcSrsPublishApi } from '@/api/modules/srs'
-import { getLiveRoomDetailApi } from '@/api/modules/liveroom'
+import { getLiveRoomDetailApi, updateLiveRoomTitleApi } from '@/api/modules/liveroom'
 import { useRoute } from 'vue-router'
+import { UserStore } from '@/stores/modules/user'
+import { type LiveRoom } from '@/api/interface/liveroom'
+const userStore = UserStore()
 const route = useRoute()
 let message = ref('')
+let messageList = reactive([] as LiveRoom.LiveroomMessageResult[])
+
 let volume = ref(0)
 let materialDialogVisible = ref(false)
+let editTitleVisible = ref(false)
 let materialName = ref('')
-let roomId = ref('')
+let liveInfo = reactive({
+  title: '',
+  description: '',
+  roomId: ''
+})
 let mediaStream: any = ref(null)
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
@@ -136,6 +174,8 @@ let peerConnection: any = reactive({} as RTCPeerConnection)
 interface materialItem {
   name: string
 }
+let materialList = reactive([] as materialItem[])
+let websocket = ref()
 watch(
   volume,
   (newVal) => {
@@ -148,8 +188,6 @@ watch(
     immediate: true
   }
 )
-let materialList = reactive([] as materialItem[])
-let websocket = ref()
 onMounted(() => {
   init()
 })
@@ -160,14 +198,29 @@ const init = async () => {
   if (id) await getLiveRoomDetail(id)
   initSocket()
 }
+const editTitle = () => {}
+const confirmTitle = async () => {
+  await updateLiveRoomTitleApi(liveInfo.roomId, {
+    title: liveInfo.title
+  })
+  editTitleVisible.value = false
+  ElMessage.success('修改成功')
+}
+const cancelTitle = () => {
+  editTitleVisible.value = false
+}
 const getLiveRoomDetail = async (id: any) => {
   const { data } = await getLiveRoomDetailApi(id)
-  roomId.value = data._id
-  // liveInfo.name = data.name
-  // liveInfo.description = data.description
+  liveInfo.roomId = data._id
+  liveInfo.title = data.title
+  liveInfo.description = data.description
 }
 const sendMessage = () => {
-  websocket.value.emit('createRoom', roomId.value)
+  websocket.value.emit('message', {
+    text: message.value,
+    roomId: liveInfo.roomId,
+    user: userStore.userInfoGet._id
+  } as LiveRoom.LiveroomMessageForm)
 }
 /**
  * 初始化socket
@@ -180,15 +233,18 @@ const initSocket = () => {
   websocket.value.emit(
     'joinRoom',
     {
-      roomId: roomId.value
+      roomId: liveInfo.roomId
     },
     ({ room }: any) => {
       console.log('加入房间成功' + room)
     }
   )
-  // websocket.value.on('ownerCreate', ({ room }: any) => {
-  //   console.log('创建房间成功' + room)
-  // })
+  websocket.value.on('message', (data: LiveRoom.LiveroomMessageResult) => {
+    console.log('收到消息')
+    console.log(data)
+
+    messageList.push(data)
+  })
   // websocket.value.on('errorMake', (room: any, socketId: string) => {
   //   console.log('创建房间失败' + room + 'socketId' + socketId)
   // })
@@ -257,7 +313,7 @@ const startLive = async () => {
   liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
   websocket.value.emit('liveStreamStatus', {
     liveStreamStatus: LiveStreamStatusEnum.ONLINE,
-    roomId: roomId.value
+    roomId: liveInfo.roomId
   })
 }
 /**
@@ -267,7 +323,7 @@ const stopLive = () => {
   liveStreamStatus.value = LiveStreamStatusEnum.OFFLINE
   websocket.value.emit('liveStreamStatus', {
     liveStreamStatus: LiveStreamStatusEnum.OFFLINE,
-    roomId: roomId.value
+    roomId: liveInfo.roomId
   })
 }
 /**
@@ -355,14 +411,51 @@ const createPeerConnection = async () => {
         img {
           margin-right: 10px;
         }
-        .el-icon:hover {
-          color: #ff6699;
-        }
-        .el-slider {
-          --el-slider-button-size: 16px;
-        }
-        .slider {
-          margin: 0 15px;
+
+        .container {
+          display: flex;
+          flex-direction: column;
+          .title-content {
+            .label-container {
+              display: flex;
+              justify-content: flex-start;
+              align-items: center;
+              .el-icon:hover {
+                cursor: pointer;
+                color: #ff6699;
+              }
+              .title {
+                margin-right: 10px;
+                color: #000;
+                font-size: 16px;
+                font-weight: 500;
+              }
+            }
+
+            .edit-title {
+              display: flex;
+              justify-content: flex-start;
+              align-items: center;
+              .input {
+                margin: 0 10px;
+              }
+            }
+          }
+          .volume {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            .el-icon:hover {
+              cursor: pointer;
+              color: #ff6699;
+            }
+            .el-slider {
+              --el-slider-button-size: 16px;
+            }
+            .slider {
+              margin: 0 15px;
+            }
+          }
         }
       }
       .right-content {
@@ -397,6 +490,24 @@ const createPeerConnection = async () => {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      .content-list {
+        height: 200px;
+        overflow-y: auto;
+        .content-item {
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+          .username {
+            color: #c9ccd0;
+            font-size: 14px;
+          }
+          .text {
+            color: #61666d;
+            font-size: 16px;
+            margin-left: 4px;
+          }
+        }
+      }
       .send-container {
         display: flex;
         justify-content: space-between;

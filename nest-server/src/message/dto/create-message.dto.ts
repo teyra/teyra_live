@@ -11,15 +11,15 @@ export class CreateMessageDto {
   @ApiProperty({ description: '文本' })
   type: MESSAGE_TYPE;
   @ApiProperty({ description: '图片' })
-  image: string;
+  image?: string;
   @ApiProperty({ description: '视频' })
-  video: string;
+  video?: string;
   @ApiProperty({ description: '引用消息' })
-  reference: string;
+  reference?: string;
   @ApiProperty({ description: '引用消息文本' })
-  reference_text: string;
+  reference_text?: string;
   @ApiProperty({ description: '发送人' })
   user: string;
   @ApiProperty({ description: '聊天群' })
-  group: string;
+  liveRoom: string;
 }

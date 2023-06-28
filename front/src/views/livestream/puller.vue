@@ -7,15 +7,25 @@
           <div class="left-content">
             <img src="@/assets/image/avatar.jpg" class="w-65 h-65 round-50" alt="" />
             <div class="info-container">
-              <span class="username">{{ liveInfo.name }}</span>
+              <span class="username">{{ liveInfo.title }}</span>
               <span class="title">{{ liveInfo.description }}</span>
             </div>
           </div>
         </div>
-        <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-          style="width: 1000px; height: 540px" autoplay webkit-playsinline="true" playsinline x-webkit-airplay="allow"
-          x5-video-player-type="h5" x5-video-player-fullscreen="true" x5-video-orientation="portraint" controls
-          muted></video>
+        <video
+          ref="localVideoRef"
+          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+          style="width: 1000px; height: 540px"
+          autoplay
+          webkit-playsinline="true"
+          playsinline
+          x-webkit-airplay="allow"
+          x5-video-player-type="h5"
+          x5-video-player-fullscreen="true"
+          x5-video-orientation="portraint"
+          controls
+          muted
+        ></video>
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -45,7 +55,13 @@
           </div>
         </div>
         <div class="send-container">
-          <el-input v-model="message" placeholder="和主播聊聊吧~" class="small-input" maxlength="20" show-word-limit></el-input>
+          <el-input
+            v-model="message"
+            placeholder="和主播聊聊吧~"
+            class="small-input"
+            maxlength="20"
+            show-word-limit
+          ></el-input>
           <el-button type="primary">发送</el-button>
         </div>
       </div>
@@ -61,13 +77,11 @@ import { webRtcSrsPullApi } from '@/api/modules/srs'
 import Header from '@/components/Header.vue'
 import { getLiveRoomDetailApi, getLiveStatusApi } from '@/api/modules/liveroom'
 import { useRoute } from 'vue-router'
+import type { LiveRoom } from '@/api/interface/liveroom'
 const route = useRoute()
-interface liveRoomItem {
-  name: string
-  iimgUrl: string
-}
 let liveInfo = reactive({
-  name: '',
+  roomId: '',
+  title: '',
   description: ''
 })
 let moreLiveRoomList = reactive([
@@ -82,7 +96,6 @@ let moreLiveRoomList = reactive([
   }
 ])
 let message = ref('')
-let roomId = ref('123')
 let currentSocketId = ref('')
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
@@ -93,7 +106,8 @@ onMounted(() => {
 })
 const getLiveRoomDetail = async (id: any) => {
   const { data } = await getLiveRoomDetailApi(id)
-  liveInfo.name = data.name
+  liveInfo.roomId = data._id
+  liveInfo.title = data.title
   liveInfo.description = data.description
 }
 const init = async () => {
@@ -106,7 +120,6 @@ const init = async () => {
     await createPeerConnection()
     initSocket()
   }
-
 }
 const getLiveStatus = async (id: any) => {
   const { data } = await getLiveStatusApi(id)
@@ -150,7 +163,7 @@ const initSocket = () => {
     console.log('连接成功')
   })
   websocket.value.emit('joinRoom', {
-    roomId: roomId.value
+    roomId: liveInfo.roomId
   })
 
   websocket.value.on('userJoined', (room: string, socketId: string) => {
@@ -159,6 +172,9 @@ const initSocket = () => {
   })
   websocket.value.on('otherJoined', () => {
     console.log('用户加入房间')
+  })
+  websocket.value.on('message', ({ text, roomId }: LiveRoom.LiveroomMessageForm) => {
+    console.log('收到消息' + text + '' + roomId)
   })
   websocket.value.on('liveStreamStatus', (status: LiveStreamStatusEnum) => {
     console.log('liveStreamStatus' + status)
@@ -335,5 +351,6 @@ const initSocket = () => {
       }
     }
   }
-}</style>
+}
+</style>
 @/api/modules/srs

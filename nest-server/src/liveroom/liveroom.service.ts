@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { HttpException, Inject, Injectable } from '@nestjs/common';
 import { CreateLiveroomDto } from './dto/create-liveroom.dto';
 import { UpdateLiveroomDto } from './dto/update-liveroom.dto';
 import { User } from 'src/user/entities/user.entity';
@@ -11,11 +11,11 @@ export class LiveroomService {
     @Inject(Liveroom.name)
     private liveRoomModel: ReturnModelType<typeof Liveroom>,
     private readonly redisService: RedisService,
-  ) { }
+  ) {}
   async create(createLiveroomDto: CreateLiveroomDto, user: DocumentType<User>) {
-    const { name, description } = createLiveroomDto;
+    const { title, description } = createLiveroomDto;
     const liveroom = await this.liveRoomModel.create({
-      name,
+      title,
       description,
       user,
     });
@@ -29,16 +29,32 @@ export class LiveroomService {
 
   async findOne(id: string) {
     const liveroom = await this.liveRoomModel.findById(id);
-    return liveroom;
+    if (liveroom) {
+      return liveroom;
+    } else {
+      throw new HttpException('直播间不存在', 404);
+    }
   }
   async findMy(user: DocumentType<User>) {
-    // console.log(user);
-    // const myLiveroom = await this.liveRoomModel.findOne({ user })
-    // console.log(myLiveroom);
-    // return myLiveroom;
+    const exists = await this.liveRoomModel.findOne({ user });
+    if (exists) {
+      return exists;
+    } else {
+      const createDto: CreateLiveroomDto = {
+        user: user._id,
+        title: user.username + '的直播间',
+        description: '',
+      };
+      return await this.liveRoomModel.create(createDto);
+    }
   }
-  update(id: number, updateLiveroomDto: UpdateLiveroomDto) {
-    return `This action updates a #${id} liveroom`;
+  async update(id: string, updateLiveroomDto: UpdateLiveroomDto) {
+    const currentRoom = await this.liveRoomModel.findById(id);
+    const { title } = updateLiveroomDto;
+    if (currentRoom) {
+      currentRoom.title = title;
+      currentRoom.save();
+    }
   }
 
   remove(id: number) {

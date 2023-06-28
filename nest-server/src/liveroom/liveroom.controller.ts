@@ -15,12 +15,15 @@ import { AuthGuard } from '@nestjs/passport';
 import { CurrentUser } from 'src/auth/current-user.decorator';
 import { User } from 'src/user/entities/user.entity';
 import { DocumentType } from '@typegoose/typegoose';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 
-@Controller('liveroom')
+@Controller()
+@ApiTags('直播间')
+@UseGuards(AuthGuard('jwt'))
+@ApiBearerAuth()
 export class LiveroomController {
-  constructor(private readonly liveroomService: LiveroomService) { }
-  @Post('add')
-  @UseGuards(AuthGuard('jwt'))
+  constructor(private readonly liveroomService: LiveroomService) {}
+  @Post('liveroom/add')
   create(
     @Body() createLiveroomDto: CreateLiveroomDto,
     @CurrentUser() user: DocumentType<User>,
@@ -28,30 +31,26 @@ export class LiveroomController {
     return this.liveroomService.create(createLiveroomDto, user);
   }
 
-  @Get('status/:id')
-  @UseGuards(AuthGuard('jwt'))
+  @Get('liveroom/status/:id')
   getLiveStatus(@Param('id') id: string) {
     return this.liveroomService.getLiveStatus(id);
   }
 
-  @Get(':id')
-  @UseGuards(AuthGuard('jwt'))
+  @Get('liveroom/:id')
   findOne(@Param('id') id: string) {
     return this.liveroomService.findOne(id);
   }
 
-  @Get('my:id')
-  @UseGuards(AuthGuard('jwt'))
-  findMy(@Param('id') id: string) {
-    console.log('12313132');
-    // return this.liveroomService.findMy(user);
+  @Get('myLiveroom')
+  findMy(@CurrentUser() user: DocumentType<User>) {
+    return this.liveroomService.findMy(user);
   }
-  @Patch(':id')
+  @Patch('liveroom/updateTitle/:id')
   update(
     @Param('id') id: string,
     @Body() updateLiveroomDto: UpdateLiveroomDto,
   ) {
-    return this.liveroomService.update(+id, updateLiveroomDto);
+    return this.liveroomService.update(id, updateLiveroomDto);
   }
 
   @Delete(':id')

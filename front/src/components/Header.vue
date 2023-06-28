@@ -2,13 +2,18 @@
   <div class="header-container" v-if="!centerDialogVisible">
     <div class="username">{{ userInfo.username }}</div>
     <div>
-      <el-button @click="createLiveRoom" type="primary">创建直播间</el-button>
       <el-button @click="startLive" type="primary">我要开播</el-button>
       <el-button @click="logout" type="info">退出登录</el-button>
     </div>
   </div>
-  <el-dialog v-model="centerDialogVisible" :close-on-click-modal="false" :show-close="false" width="30%" center top="30%"
-    append-to-body>
+  <el-dialog
+    v-model="centerDialogVisible"
+    :close-on-click-modal="false"
+    :show-close="false"
+    width="30%"
+    center
+    append-to-body
+  >
     <el-form label-position="top" label-width="100px" :model="form" style="max-width: 460px">
       <el-form-item label="账号">
         <el-input v-model="form.username" placeholder="请输入账号" size="large" />
@@ -20,9 +25,21 @@
     <template #footer>
       <div>
         <div style="display: flex; justify-content: space-between">
-          <img src="@/assets/image/login1.png" width="100" height="100" style="border-radius: 10px;" alt="" />
+          <img
+            src="@/assets/image/login1.png"
+            width="100"
+            height="100"
+            style="border-radius: 10px"
+            alt=""
+          />
           <el-button @click="login" type="primary">登录</el-button>
-          <img src="@/assets/image/login2.png" width="100" height="100" style="border-radius: 10px;" alt="" />
+          <img
+            src="@/assets/image/login2.png"
+            width="100"
+            height="100"
+            style="border-radius: 10px"
+            alt=""
+          />
         </div>
       </div>
     </template>
@@ -30,7 +47,7 @@
 </template>
 
 <script setup lang="ts">
-import { createLiveRoomApi, getMyLiveRoomApi } from '@/api/modules/liveroom'
+import { getMyLiveRoomApi } from '@/api/modules/liveroom'
 import { loginApi } from '@/api/modules/login'
 import { UserStore } from '@/stores/modules/user'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
@@ -81,14 +98,8 @@ const logout = async () => {
   userInfo.username = ''
 }
 const startLive = async () => {
-  await getMyLiveRoomApi()
-  // window.open('/live-push')
-}
-const createLiveRoom = async () => {
-  await createLiveRoomApi({
-    name: 'teyra',
-    description: '周末训练赛'
-  })
+  const { data } = await getMyLiveRoomApi()
+  window.open('/live-push?id=' + data._id)
 }
 </script>
 <style lang="scss">
@@ -114,7 +125,5 @@ const createLiveRoom = async () => {
     color: #ffffff;
     margin-right: 10px;
   }
-
-
 }
 </style>

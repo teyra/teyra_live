@@ -4,11 +4,6 @@ export const routes = [
     redirect: '/live-pull'
   },
   {
-    path: '/login',
-    name: 'Login',
-    component: () => import('@/views/login.vue')
-  },
-  {
     path: '/about',
     name: 'about',
     component: () => import('@/views/AboutView.vue')

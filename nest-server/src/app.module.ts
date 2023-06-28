@@ -15,6 +15,7 @@ import { ConfigModule } from '@nestjs/config';
 import { LiveroomModule } from './liveroom/liveroom.module';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './redis/redis.module';
+import { LiveUserRoleModule } from './live-user-role/live-user-role.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -26,6 +27,7 @@ import { RedisModule } from './redis/redis.module';
     LiveroomModule,
     AuthModule,
     RedisModule,
+    LiveUserRoleModule,
   ],
   controllers: [AppController],
   providers: [AppService],
