@@ -2,17 +2,9 @@
   <div class="flex justify-center items-center push-container">
     <div class="left-container flex-column">
       <div class="video-container">
-        <video
-          ref="localVideoRef"
-          class="w-960 h-540"
-          autoplay
-          webkit-playsinline="true"
-          playsinline
-          x-webkit-airplay="allow"
-          x5-video-player-type="h5"
-          x5-video-player-fullscreen="true"
-          x5-video-orientation="portraint"
-        ></video>
+        <video ref="localVideoRef" class="w-960 h-540" autoplay webkit-playsinline="true" playsinline
+          x-webkit-airplay="allow" x5-video-player-type="h5" x5-video-player-fullscreen="true"
+          x5-video-orientation="portraint"></video>
         <div class="media-action-bar" v-if="materialList.length === 0">
           <div class="box">
             <el-icon :size="30">
@@ -54,13 +46,8 @@
                 </el-icon>
               </div>
               <div class="edit-title" v-if="editTitleVisible">
-                <el-input
-                  v-model="liveInfo.title"
-                  class="input"
-                  maxlength="15"
-                  show-word-limit
-                  placeholder="请说点什么吧"
-                ></el-input>
+                <el-input v-model="liveInfo.title" class="input" maxlength="15" show-word-limit
+                  placeholder="请说点什么吧"></el-input>
                 <el-button @click="confirmTitle" type="primary" size="small">确定</el-button>
                 <el-button @click="cancelTitle" size="small">取消</el-button>
               </div>
@@ -75,20 +62,10 @@
           </div>
         </div>
         <div class="right-content">
-          <el-button
-            type="primary"
-            size="large"
-            v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE"
-            @click="startLive"
-            >开始直播</el-button
-          >
-          <el-button
-            type="primary"
-            size="large"
-            v-else-if="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-            @click="stopLive"
-            >结束直播</el-button
-          >
+          <el-button type="primary" size="large" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE"
+            @click="startLive">开始直播</el-button>
+          <el-button type="primary" size="large" v-else-if="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+            @click="stopLive">结束直播</el-button>
         </div>
       </div>
     </div>
@@ -117,13 +94,7 @@
           </div>
         </div>
         <div class="send-container">
-          <el-input
-            v-model="message"
-            placeholder="和观众聊聊吧~"
-            class="small-input"
-            maxlength="20"
-            show-word-limit
-          ></el-input>
+          <el-input v-model="message" placeholder="和观众聊聊吧~" class="small-input" maxlength="20" show-word-limit></el-input>
           <el-button type="primary" @click="sendMessage">发送</el-button>
         </div>
       </div>
@@ -198,7 +169,7 @@ const init = async () => {
   if (id) await getLiveRoomDetail(id)
   initSocket()
 }
-const editTitle = () => {}
+const editTitle = () => { }
 const confirmTitle = async () => {
   await updateLiveRoomTitleApi(liveInfo.roomId, {
     title: liveInfo.title
@@ -233,7 +204,8 @@ const initSocket = () => {
   websocket.value.emit(
     'joinRoom',
     {
-      roomId: liveInfo.roomId
+      roomId: liveInfo.roomId,
+      user: userStore.userInfoGet._id
     },
     ({ room }: any) => {
       console.log('加入房间成功' + room)
@@ -304,7 +276,7 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     }
   }
 }
-const checkPeerConnection = async () => {}
+const checkPeerConnection = async () => { }
 /**
  * 开始直播
  */
@@ -360,11 +332,13 @@ const createPeerConnection = async () => {
   background-image: url('@/assets/image/live_bg.jpg');
   background-repeat: no-repeat;
   background-size: cover;
+
   .left-container {
     .video-container {
       position: relative;
       display: flex;
       background: #000000;
+
       .media-action-bar {
         position: absolute;
         top: 50%;
@@ -373,11 +347,13 @@ const createPeerConnection = async () => {
         display: flex;
         flex-direction: column;
         align-items: center;
+
         .more-bar {
           display: flex;
           justify-content: space-between;
           align-items: center;
         }
+
         .box {
           display: flex;
           flex-direction: column;
@@ -390,6 +366,7 @@ const createPeerConnection = async () => {
           justify-content: center;
           margin: 10px;
           cursor: pointer;
+
           .text {
             font-size: 14px;
             padding-top: 10px;
@@ -404,10 +381,12 @@ const createPeerConnection = async () => {
       align-items: center;
       border-bottom-left-radius: 5px;
       border-bottom-right-radius: 5px;
+
       .left-content {
         display: flex;
         justify-content: flex-start;
         align-items: center;
+
         img {
           margin-right: 10px;
         }
@@ -415,15 +394,18 @@ const createPeerConnection = async () => {
         .container {
           display: flex;
           flex-direction: column;
+
           .title-content {
             .label-container {
               display: flex;
               justify-content: flex-start;
               align-items: center;
+
               .el-icon:hover {
                 cursor: pointer;
                 color: #ff6699;
               }
+
               .title {
                 margin-right: 10px;
                 color: #000;
@@ -436,28 +418,34 @@ const createPeerConnection = async () => {
               display: flex;
               justify-content: flex-start;
               align-items: center;
+
               .input {
                 margin: 0 10px;
               }
             }
           }
+
           .volume {
             display: flex;
             justify-content: flex-start;
             align-items: center;
+
             .el-icon:hover {
               cursor: pointer;
               color: #ff6699;
             }
+
             .el-slider {
               --el-slider-button-size: 16px;
             }
+
             .slider {
               margin: 0 15px;
             }
           }
         }
       }
+
       .right-content {
         display: flex;
         justify-content: flex-start;
@@ -465,6 +453,7 @@ const createPeerConnection = async () => {
       }
     }
   }
+
   .right-container {
     opacity: 0.9;
     justify-content: space-between;
@@ -476,8 +465,10 @@ const createPeerConnection = async () => {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+
       .content-list {
         height: 200px;
+
         .content-item {
           display: flex;
           justify-content: space-between;
@@ -485,22 +476,27 @@ const createPeerConnection = async () => {
         }
       }
     }
+
     .danmu-interactive {
       height: 49%;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+
       .content-list {
         height: 200px;
         overflow-y: auto;
+
         .content-item {
           display: flex;
           justify-content: flex-start;
           align-items: center;
+
           .username {
             color: #c9ccd0;
             font-size: 14px;
           }
+
           .text {
             color: #61666d;
             font-size: 16px;
@@ -508,6 +504,7 @@ const createPeerConnection = async () => {
           }
         }
       }
+
       .send-container {
         display: flex;
         justify-content: space-between;

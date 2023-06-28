@@ -6,4 +6,4 @@ import { LiveUserRoleController } from './live-user-role.controller';
   controllers: [LiveUserRoleController],
   providers: [LiveUserRoleService]
 })
-export class LiveUserRoleModule {}
+export class LiveUserRoleModule { }

@@ -13,24 +13,31 @@ import { User } from 'src/user/entities/user.entity';
 import { ReturnModelType } from '@typegoose/typegoose';
 import { Message } from 'src/message/entities/message.entity';
 import { CreateMessageDto } from 'src/message/dto/create-message.dto';
+import { LiveUserRoleService } from 'src/live-user-role/live-user-role.service';
 @WebSocketGateway(81, { cors: true })
 export class LiveroomGateway {
   @WebSocketServer() server: Server;
   constructor(
     private readonly redisService: RedisService,
+    private readonly liveUserRoleService: LiveUserRoleService,
+
     @Inject(User.name)
     private readonly userModel: ReturnModelType<typeof User>,
     @Inject(Message.name)
     private readonly messageModel: ReturnModelType<typeof Message>,
-  ) {}
+  ) { }
   @SubscribeMessage('joinRoom')
-  joinRoom(
+  async joinRoom(
     @MessageBody() createMessageDto: any,
     @ConnectedSocket() client: Socket,
   ) {
-    const { roomId } = createMessageDto;
-    client.join(roomId);
-    this.server.to(roomId).emit('otherJoined');
+    const { roomId, user } = createMessageDto;
+    await client.join(roomId);
+    await this.liveUserRoleService.create({
+      user,
+      liveRoom: roomId,
+    })
+    await this.server.to(roomId).emit('otherJoined');
     // client.to(roomId).emit('otherJoined');
     return {
       room: createMessageDto.roomId,
@@ -61,7 +68,7 @@ export class LiveroomGateway {
     const message = {
       text: newMessage.text,
       username: exist.username,
-      roleName:1
+      roleName: 1
     };
     this.server.to(roomId).emit('message', message);
   }
