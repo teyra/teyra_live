@@ -1,5 +1,5 @@
 <template>
-  <div class="flex justify-center items-center pull-container">
+  <div class="flex justify-center items-center pull-container" v-if="platForm === 1">
     <Header></Header>
     <div class="left-container flex-column">
       <div class="video-container">
@@ -12,20 +12,9 @@
             </div>
           </div>
         </div>
-        <video
-          ref="localVideoRef"
-          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-          style="width: 1000px; height: 540px"
-          autoplay
-          webkit-playsinline="true"
-          playsinline
-          x-webkit-airplay="allow"
-          x5-video-player-type="h5"
-          x5-video-player-fullscreen="true"
-          x5-video-orientation="portraint"
-          controls
-          muted
-        ></video>
+        <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+          style="width: 1000px; height: 540px" autoplay webkit-playsinline="true" playsinline x-webkit-airplay="allow"
+          x5-video-player-type="h5" x5-video-player-fullscreen="true" x5-video-orientation="portraint" controls></video>
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -66,17 +55,16 @@
           </div>
         </div>
         <div class="send-container">
-          <el-input
-            v-model="message"
-            placeholder="和主播聊聊吧~"
-            class="small-input"
-            maxlength="20"
-            show-word-limit
-          ></el-input>
+          <el-input v-model="message" placeholder="和主播聊聊吧~" class="small-input" maxlength="20" show-word-limit></el-input>
           <el-button type="primary" @click="sendMessage">发送</el-button>
         </div>
       </div>
     </div>
+  </div>
+  <div v-if="platForm === 2" class="mobile-container">
+    <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" style="width: 100%; height: 100%"
+      autoplay webkit-playsinline="true" playsinline x-webkit-airplay="allow" x5-video-player-type="h5"
+      x5-video-player-fullscreen="true" x5-video-orientation="portraint" controls></video>
   </div>
 </template>
 
@@ -93,6 +81,7 @@ import { LiveRoom } from '@/api/interface/liveroom'
 const userStore = UserStore()
 const route = useRoute()
 let websocket = ref()
+let platForm = ref(1)
 let liveInfo = reactive({
   roomId: '',
   title: '',
@@ -147,10 +136,21 @@ const init = async () => {
     query: { id }
   } = route
   if (id) {
+    checkPlatform()
     await getLiveRoomDetail(id)
     await getLiveStatus(id)
     await createPeerConnection()
     initSocket()
+
+  }
+}
+const checkPlatform = () => {
+  if (/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
+    console.log('手机端');
+    platForm.value = 2
+  } else {
+    platForm.value = 1
+    console.log('PC端');
   }
 }
 const getLiveStatus = async (id: any) => {
@@ -382,20 +382,24 @@ const initSocket = () => {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+
       .content-list::-webkit-scrollbar {
         width: 8px;
         height: 8px;
         border: 2px solid #f2f2f2;
         background-color: #f2f2f2;
       }
+
       .content-list {
         height: 600px;
         overflow-y: auto;
+
         .content-item {
           display: flex;
           justify-content: flex-start;
           align-items: center;
           margin: 6px 0;
+
           .host {
             border: 1px solid var(--el-color-primary);
             padding: 0 5px;
@@ -403,6 +407,7 @@ const initSocket = () => {
             font-size: 12px;
             margin-right: 5px;
           }
+
           .manager {
             border: 1px solid var(--el-color-primary);
             padding: 0 5px;
@@ -410,21 +415,25 @@ const initSocket = () => {
             font-size: 12px;
             margin-right: 5px;
           }
+
           .username {
             color: #c9ccd0;
             font-size: 14px;
           }
+
           .text {
             color: #61666d;
             font-size: 14px;
             margin-left: 4px;
           }
+
           .join {
             .text {
               color: #999999;
               font-size: 14px;
             }
           }
+
           .tip {
             .text {
               font-size: 14px;
@@ -442,6 +451,12 @@ const initSocket = () => {
       }
     }
   }
+}
+
+.mobile-container {
+  height: 100vh;
+  width: 100vh;
+  background-color: #131212;
 }
 </style>
 @/api/modules/srs
