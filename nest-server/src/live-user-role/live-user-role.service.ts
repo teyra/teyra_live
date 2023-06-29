@@ -15,17 +15,24 @@ export class LiveUserRoleService {
     private readonly liveroomModel: ReturnModelType<typeof Liveroom>,
     @Inject(LiveUserRole.name)
     private readonly liveUserRoleModel: ReturnModelType<typeof LiveUserRole>,
-  ) { }
+  ) {}
   async create(createLiveUserRoleDto: CreateLiveUserRoleDto) {
-    const { user, liveRoom } = createLiveUserRoleDto
-    const exist = await this.liveUserRoleModel.findOne({ user, liveRoom })
+    const { user, liveRoom } = createLiveUserRoleDto;
+    const exist = await this.liveUserRoleModel.findOne({ user, liveRoom });
+    console.log(exist, 'exist');
     if (!exist) {
-      const currentLiveRoom = await this.liveroomModel.findById(liveRoom)
+      const currentLiveRoom = await this.liveroomModel.findById(liveRoom);
+      console.log(currentLiveRoom.user);
+      console.log(user);
+
       await this.liveUserRoleModel.create({
         user,
         liveRoom,
-        role: String(currentLiveRoom.user) === String(user) ? ROLE_TYPE.HOST : ROLE_TYPE.VISITOR
-      })
+        role:
+          String(currentLiveRoom.user) === String(user)
+            ? ROLE_TYPE.HOST
+            : ROLE_TYPE.VISITOR,
+      });
     }
   }
 

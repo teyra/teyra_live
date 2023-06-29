@@ -53,8 +53,8 @@ export class LiveroomController {
     return this.liveroomService.update(id, updateLiveroomDto);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.liveroomService.remove(+id);
+  @Get('liveroom/UserRoleList/:id')
+  getUserRoleList(@Param('id') id: string) {
+    return this.liveroomService.getUserRoleList(id);
   }
 }

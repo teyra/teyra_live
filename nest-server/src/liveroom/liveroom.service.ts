@@ -5,11 +5,14 @@ import { User } from 'src/user/entities/user.entity';
 import { DocumentType, ReturnModelType } from '@typegoose/typegoose';
 import { Liveroom } from './entities/liveroom.entity';
 import { RedisService } from 'src/redis/redis.service';
+import { LiveUserRole } from 'src/live-user-role/entities/live-user-role.entity';
 @Injectable()
 export class LiveroomService {
   constructor(
     @Inject(Liveroom.name)
     private liveRoomModel: ReturnModelType<typeof Liveroom>,
+    @Inject(LiveUserRole.name)
+    private liveUserRoleModel: ReturnModelType<typeof LiveUserRole>,
     private readonly redisService: RedisService,
   ) {}
   async create(createLiveroomDto: CreateLiveroomDto, user: DocumentType<User>) {
@@ -56,8 +59,15 @@ export class LiveroomService {
       currentRoom.save();
     }
   }
-
-  remove(id: number) {
-    return `This action removes a #${id} liveroom`;
+  async getUserRoleList(id: string) {
+    const data = await this.liveUserRoleModel
+      .find({ liveRoom: id })
+     const res = data.map((v) => {
+        return {
+          user: v.user,
+          role: v.role,
+        };
+      });
+    console.log(res);
   }
 }

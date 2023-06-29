@@ -28,6 +28,7 @@ declare module 'vue' {
     IEpMoreFilled: typeof import('~icons/ep/more-filled')['default']
     IEpPlus: typeof import('~icons/ep/plus')['default']
     IEpVideoCamera: typeof import('~icons/ep/video-camera')['default']
+    Im: typeof import('./src/components/Im.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     TheWelcome: typeof import('./src/components/TheWelcome.vue')['default']

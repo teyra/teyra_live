@@ -15,4 +15,9 @@ export namespace LiveRoom {
     username: string
     roleName: string
   }
+  export interface UserRoleListResult {
+    text: string
+    username: string
+    roleName: string
+  }
 }

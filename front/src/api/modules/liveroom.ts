@@ -37,3 +37,12 @@ export const updateLiveRoomTitleApi = (id: string, data: LiveRoom.updateLiveRoom
     data
   })
 }
+/**
+ * 获取直播间用户角色列表
+ */
+export const getUserRoleListApi = (id: string) => {
+  return http({
+    url: `/liveroom/UserRoleList/${id}`,
+    method: 'get'
+  })
+}
