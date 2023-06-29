@@ -1,6 +1,5 @@
 <template>
   <div>
-    <!-- <video ref="videoElement" controls muted src="rtmp://localhost/live/livestream/123"></video> -->
     <video-player :options="playerOptions" />
   </div>
 </template>

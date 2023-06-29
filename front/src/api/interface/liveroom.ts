@@ -10,14 +10,29 @@ export namespace LiveRoom {
     roomId: string
     user: string
   }
+  export enum MESSAGE_TYPE {
+    DANMU = 1, //弹幕
+    NOTICE = 2, //系统通知
+    WELCOME = 3 //欢迎语
+  }
   export interface LiveroomMessageResult {
     text: string
-    username: string
-    roleName: string
+    username?: string
+    userId?: string
+    role?: number
+    type: MESSAGE_TYPE
+  }
+  export interface MaterialItem {
+    name: string
+  }
+  export enum ROLE_TYPE {
+    VISITOR = 1, //游客
+    FANS = 2, //粉丝
+    MANAGER = 3, //管理员
+    HOST = 4 //房主
   }
   export interface UserRoleListResult {
-    text: string
-    username: string
-    roleName: string
+    user: string
+    role: ROLE_TYPE
   }
 }

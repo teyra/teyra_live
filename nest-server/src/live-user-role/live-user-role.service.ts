@@ -19,12 +19,8 @@ export class LiveUserRoleService {
   async create(createLiveUserRoleDto: CreateLiveUserRoleDto) {
     const { user, liveRoom } = createLiveUserRoleDto;
     const exist = await this.liveUserRoleModel.findOne({ user, liveRoom });
-    console.log(exist, 'exist');
-    if (!exist) {
+    if (!exist && user && liveRoom) {
       const currentLiveRoom = await this.liveroomModel.findById(liveRoom);
-      console.log(currentLiveRoom.user);
-      console.log(user);
-
       await this.liveUserRoleModel.create({
         user,
         liveRoom,
@@ -35,7 +31,6 @@ export class LiveUserRoleService {
       });
     }
   }
-
   findAll() {
     return `This action returns all liveUserRole`;
   }

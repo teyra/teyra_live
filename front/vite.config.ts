@@ -7,6 +7,8 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
+import { viteVConsole } from 'vite-plugin-vconsole'
+import path from 'path'
 export default defineConfig({
   server: {
     port: 5000,
@@ -34,6 +36,15 @@ export default defineConfig({
     }),
     Icons({
       autoInstall: true
+    }),
+    viteVConsole({
+      entry: path.resolve('src/main.ts'), // 入口文件，或者可以使用这个配置: [path.resolve('src/main.js')]
+      localEnabled: false, // 本地是否启用
+      enabled: false, // 是否启用
+      config: {
+        maxLogNumber: 1000,
+        theme: 'light' // 主题颜色 'dark'|'light'
+      }
     })
   ],
   resolve: {

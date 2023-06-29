@@ -60,14 +60,16 @@ export class LiveroomService {
     }
   }
   async getUserRoleList(id: string) {
-    const data = await this.liveUserRoleModel
-      .find({ liveRoom: id })
-     const res = data.map((v) => {
-        return {
-          user: v.user,
-          role: v.role,
-        };
-      });
-    console.log(res);
+    const data = await this.liveUserRoleModel.find({
+      liveRoom: id,
+      role: { $gte: 3 },
+    });
+    const res = data.map((v) => {
+      return {
+        user: v.user._id,
+        role: v.role,
+      };
+    });
+    return res;
   }
 }

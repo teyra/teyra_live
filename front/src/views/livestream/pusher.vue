@@ -109,11 +109,20 @@
       </div>
       <div class="danmu-interactive p-10 round-5 w-350 bg-white">
         <div class="c-black fs-16">弹幕互动区</div>
-        <div class="content-list">
+        <div class="content-list" ref="contentList">
           <div v-for="(item, index) in messageList" :key="index" class="content-item">
-            <span>{{ item.roleName }}</span>
-            <span class="username"> {{ item.username }} :</span>
-            <span class="text">{{ item.text }}</span>
+            <div v-if="item.type === LiveRoom.MESSAGE_TYPE.DANMU">
+              <span v-if="item.role === 4" class="host">主播</span>
+              <span v-if="item.role === 3" class="manager">管理员</span>
+              <span class="username"> {{ item.username }} :</span>
+              <span class="text">{{ item.text }}</span>
+            </div>
+            <div class="tip" v-if="item.type === LiveRoom.MESSAGE_TYPE.NOTICE">
+              <span class="text">{{ item.text }}</span>
+            </div>
+            <div class="join" v-if="item.type === LiveRoom.MESSAGE_TYPE.WELCOME">
+              <span class="text">{{ item.text }}</span>
+            </div>
           </div>
         </div>
         <div class="send-container">
@@ -146,8 +155,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { LiveStreamStatusEnum, MediaMaterialEnum } from '@/enums/media'
 import { io } from 'socket.io-client'
+import { LiveStreamStatusEnum, MediaMaterialEnum } from '@/enums/media'
 import { webRtcSrsPublishApi } from '@/api/modules/srs'
 import {
   getLiveRoomDetailApi,
@@ -156,30 +165,33 @@ import {
 } from '@/api/modules/liveroom'
 import { useRoute } from 'vue-router'
 import { UserStore } from '@/stores/modules/user'
-import { type LiveRoom } from '@/api/interface/liveroom'
+import { LiveRoom } from '@/api/interface/liveroom'
 const userStore = UserStore()
 const route = useRoute()
+//websocket
+let websocket = ref()
 let message = ref('')
 let messageList = reactive([] as LiveRoom.LiveroomMessageResult[])
-
-let volume = ref(0)
-let materialDialogVisible = ref(false)
+let contentList: any = ref<HTMLElement>()
 let editTitleVisible = ref(false)
-let materialName = ref('')
 let liveInfo = reactive({
   title: '',
   description: '',
   roomId: ''
 })
+// webRTC
+let materialName = ref('')
+let materialDialogVisible = ref(false)
+let volume = ref(0)
 let mediaStream: any = ref(null)
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection: any = reactive({} as RTCPeerConnection)
-interface materialItem {
-  name: string
-}
-let materialList = reactive([] as materialItem[])
-let websocket = ref()
+let materialList = reactive([] as LiveRoom.MaterialItem[])
+
+onMounted(() => {
+  init()
+})
 watch(
   volume,
   (newVal) => {
@@ -192,9 +204,6 @@ watch(
     immediate: true
   }
 )
-onMounted(() => {
-  init()
-})
 const init = async () => {
   const {
     query: { id }
@@ -210,6 +219,7 @@ const init = async () => {
  */
 const getUserRoleList = async () => {
   const { data } = await getUserRoleListApi(liveInfo.roomId)
+  // userRoleList = data
 }
 const confirmTitle = async () => {
   await updateLiveRoomTitleApi(liveInfo.roomId, {
@@ -228,38 +238,61 @@ const getLiveRoomDetail = async (id: any) => {
   liveInfo.description = data.description
 }
 const sendMessage = () => {
-  websocket.value.emit('message', {
-    text: message.value,
-    roomId: liveInfo.roomId,
-    user: userStore.userInfoGet._id
-  } as LiveRoom.LiveroomMessageForm)
+  if (!message.value) {
+    return
+  }
+  websocket.value.emit(
+    'message',
+    {
+      text: message.value,
+      roomId: liveInfo.roomId,
+      user: userStore.userInfoGet._id
+    } as LiveRoom.LiveroomMessageForm,
+    () => {
+      console.log('发送成功')
+      contentList.value.scrollTop = contentList.value.scrollHeight
+      message.value = ''
+    }
+  )
 }
 /**
  * 初始化socket
  */
 const initSocket = () => {
-  websocket.value = io('ws://localhost:81')
+  websocket.value = io(import.meta.env.VITE_SOCKET_URL, {
+    auth: {
+      token: localStorage.getItem('token')
+    }
+  })
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
   websocket.value.emit(
     'joinRoom',
     {
-      roomId: liveInfo.roomId
+      roomId: liveInfo.roomId,
+      user: userStore.userInfoGet._id
     },
     ({ room }: any) => {
       console.log('加入房间成功' + room)
     }
   )
+  websocket.value.on('memberJoined', ({ username }: any) => {
+    messageList.push({
+      text: username + '  进入直播间',
+      type: LiveRoom.MESSAGE_TYPE.WELCOME
+    })
+  })
   websocket.value.on('message', (data: LiveRoom.LiveroomMessageResult) => {
     console.log('收到消息')
-    console.log(data)
-
-    messageList.push(data)
+    messageList.push({
+      type: LiveRoom.MESSAGE_TYPE.DANMU,
+      text: data.text,
+      username: data.username,
+      userId: data.userId,
+      role: data.role
+    })
   })
-  // websocket.value.on('errorMake', (room: any, socketId: string) => {
-  //   console.log('创建房间失败' + room + 'socketId' + socketId)
-  // })
 }
 const addMediaMaterial = (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => {
   switch (type) {
@@ -316,12 +349,10 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
     }
   }
 }
-const checkPeerConnection = async () => {}
 /**
  * 开始直播
  */
 const startLive = async () => {
-  // await createPeerConnection()
   liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
   websocket.value.emit('liveStreamStatus', {
     liveStreamStatus: LiveStreamStatusEnum.ONLINE,
@@ -355,7 +386,7 @@ const createPeerConnection = async () => {
   await peerConnection.setLocalDescription(offer)
   const session: any = await webRtcSrsPublishApi({
     api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/',
-    streamurl: 'webrtc://localhost/live/livestream/123',
+    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream/${liveInfo.roomId}`,
     sdp: offer.sdp
   })
   await peerConnection.setRemoteDescription(
@@ -488,6 +519,12 @@ const createPeerConnection = async () => {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      .content-list::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        border: 2px solid #f2f2f2;
+        background-color: #f2f2f2;
+      }
       .content-list {
         height: 200px;
         .content-item {
@@ -502,6 +539,12 @@ const createPeerConnection = async () => {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
+      .content-list::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        border: 2px solid #f2f2f2;
+        background-color: #f2f2f2;
+      }
       .content-list {
         height: 200px;
         overflow-y: auto;
@@ -509,14 +552,41 @@ const createPeerConnection = async () => {
           display: flex;
           justify-content: flex-start;
           align-items: center;
+          margin: 6px 0;
+          .host {
+            border: 1px solid var(--el-color-primary);
+            padding: 0 5px;
+            color: var(--el-color-primary);
+            font-size: 12px;
+            margin-right: 5px;
+          }
+          .manager {
+            border: 1px solid var(--el-color-primary);
+            padding: 0 5px;
+            color: var(--el-color-primary);
+            font-size: 12px;
+            margin-right: 5px;
+          }
           .username {
             color: #c9ccd0;
             font-size: 14px;
           }
           .text {
             color: #61666d;
-            font-size: 16px;
+            font-size: 14px;
             margin-left: 4px;
+          }
+          .join {
+            .text {
+              color: #999999;
+              font-size: 14px;
+            }
+          }
+          .tip {
+            .text {
+              font-size: 14px;
+              color: var(--el-color-primary);
+            }
           }
         }
       }

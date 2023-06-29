@@ -14,6 +14,7 @@ import { ReturnModelType } from '@typegoose/typegoose';
 import { Message } from 'src/message/entities/message.entity';
 import { CreateMessageDto } from 'src/message/dto/create-message.dto';
 import { LiveUserRoleService } from 'src/live-user-role/live-user-role.service';
+import { LiveUserRole } from 'src/live-user-role/entities/live-user-role.entity';
 @WebSocketGateway(81, { cors: true })
 export class LiveroomGateway {
   @WebSocketServer() server: Server;
@@ -23,9 +24,24 @@ export class LiveroomGateway {
 
     @Inject(User.name)
     private readonly userModel: ReturnModelType<typeof User>,
+    @Inject(LiveUserRole.name)
+    private readonly liveUserRoleModel: ReturnModelType<typeof LiveUserRole>,
     @Inject(Message.name)
     private readonly messageModel: ReturnModelType<typeof Message>,
-  ) { }
+  ) {}
+  async handleConnection(socket: Socket) {
+    try {
+      console.log();
+      const currentToken = socket.handshake.auth.token;
+    // const existRedisToken = await this.redisService.get('user-token' + payload.sub);
+    // if (!existRedisToken) {
+    //   throw new UnauthorizedException('token过期');
+    // }
+    // if (String(currentToken) !== String(existRedisToken)) {
+    //   throw new UnauthorizedException('token过期');
+    // }
+    } catch (e) {}
+  }
   @SubscribeMessage('joinRoom')
   async joinRoom(
     @MessageBody() createMessageDto: any,
@@ -36,14 +52,14 @@ export class LiveroomGateway {
     await this.liveUserRoleService.create({
       user,
       liveRoom: roomId,
-    })
-    await this.server.to(roomId).emit('otherJoined');
-    // client.to(roomId).emit('otherJoined');
+    });
+    const currentUser = await this.userModel.findById(user);
+    await this.server.to(roomId).emit('memberJoined', {
+      username: currentUser.username,
+    });
     return {
       room: createMessageDto.roomId,
     };
-    // client.emit('ownerCreate', { room: 12323 });
-    // this.server.emit('ownerCreate', { room: 12323 });
   }
   @SubscribeMessage('liveStreamStatus')
   watchLiveStreamStatus(@MessageBody() messageBody: any) {
@@ -64,12 +80,18 @@ export class LiveroomGateway {
       user,
       liveRoom: roomId,
     };
+    const currentRole = await this.liveUserRoleModel.findOne({
+      user,
+      liveRoom: roomId,
+    });
     const newMessage = await this.messageModel.create(createmessageDto);
     const message = {
       text: newMessage.text,
       username: exist.username,
-      roleName: 1
+      userId: exist._id,
+      role: currentRole.role,
     };
     this.server.to(roomId).emit('message', message);
+    return message;
   }
 }

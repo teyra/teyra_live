@@ -51,9 +51,7 @@ import { getMyLiveRoomApi } from '@/api/modules/liveroom'
 import { loginApi } from '@/api/modules/login'
 import { UserStore } from '@/stores/modules/user'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
 const userStore = UserStore()
-const router = useRouter()
 let form = reactive({
   username: '',
   password: ''
@@ -114,7 +112,7 @@ const startLive = async () => {
   left: 0;
   right: 0;
   padding: 20px;
-  background: #bbc6a1;
+  background: #ffffff;
   display: flex;
   justify-content: space-between;
   align-items: center;

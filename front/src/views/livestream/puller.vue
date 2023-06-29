@@ -49,9 +49,20 @@
     <div class="right-container flex-column">
       <div class="danmu-interactive p-10 round-5 w-350 bg-white">
         <div class="c-black fs-16">弹幕互动区</div>
-        <div class="content-list">
-          <div class="tip">
-            系统提示：哔哩哔哩直播内容及互动评论须严格遵守直播规范，严禁传播违法违规、低俗血暴、吸烟酗酒、造谣诈骗等不良有害信息。如有违规，平台将对违规直播间或账号进行相应的处罚！注意理性打赏，严禁未成年人直播或打赏。请勿轻信各类招聘征婚、代练代抽、刷钻、购买礼包码、游戏币等广告信息，且如主播在推广商品中诱导私下交易，请谨慎判断，以免上当受骗。
+        <div class="content-list" ref="contentList">
+          <div v-for="(item, index) in messageList" :key="index" class="content-item">
+            <div v-if="item.type === LiveRoom.MESSAGE_TYPE.DANMU">
+              <span v-if="item.role === 4" class="host">主播</span>
+              <span v-if="item.role === 3" class="manager">管理员</span>
+              <span class="username"> {{ item.username }} :</span>
+              <span class="text">{{ item.text }}</span>
+            </div>
+            <div class="tip" v-if="item.type === LiveRoom.MESSAGE_TYPE.NOTICE">
+              <span class="text">{{ item.text }}</span>
+            </div>
+            <div class="join" v-if="item.type === LiveRoom.MESSAGE_TYPE.WELCOME">
+              <span class="text">{{ item.text }}</span>
+            </div>
           </div>
         </div>
         <div class="send-container">
@@ -62,7 +73,7 @@
             maxlength="20"
             show-word-limit
           ></el-input>
-          <el-button type="primary">发送</el-button>
+          <el-button type="primary" @click="sendMessage">发送</el-button>
         </div>
       </div>
     </div>
@@ -70,15 +81,18 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
+import Header from '@/components/Header.vue'
 import { LiveStreamStatusEnum } from '@/enums/media'
 import { webRtcSrsPullApi } from '@/api/modules/srs'
-import Header from '@/components/Header.vue'
 import { getLiveRoomDetailApi, getLiveStatusApi } from '@/api/modules/liveroom'
 import { useRoute } from 'vue-router'
-import type { LiveRoom } from '@/api/interface/liveroom'
+import { UserStore } from '@/stores/modules/user'
+import { LiveRoom } from '@/api/interface/liveroom'
+const userStore = UserStore()
 const route = useRoute()
+let websocket = ref()
 let liveInfo = reactive({
   roomId: '',
   title: '',
@@ -96,14 +110,32 @@ let moreLiveRoomList = reactive([
   }
 ])
 let message = ref('')
-let currentSocketId = ref('')
+let contentList: any = ref<HTMLElement>()
+let messageList = reactive([] as LiveRoom.LiveroomMessageResult[])
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection = reactive({} as RTCPeerConnection)
-let websocket = ref()
 onMounted(() => {
   init()
 })
+const sendMessage = () => {
+  if (!message.value) {
+    return
+  }
+  websocket.value.emit(
+    'message',
+    {
+      text: message.value,
+      roomId: liveInfo.roomId,
+      user: userStore.userInfoGet._id
+    } as LiveRoom.LiveroomMessageForm,
+    () => {
+      console.log('发送成功')
+      contentList.value.scrollTop = contentList.value.scrollHeight
+      message.value = ''
+    }
+  )
+}
 const getLiveRoomDetail = async (id: any) => {
   const { data } = await getLiveRoomDetailApi(id)
   liveInfo.roomId = data._id
@@ -147,7 +179,7 @@ const createPeerConnection = async () => {
   await peerConnection.setLocalDescription(offer)
   const session: any = await webRtcSrsPullApi({
     api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/play/',
-    streamurl: 'webrtc://localhost/live/livestream/123',
+    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream/${liveInfo.roomId}`,
     sdp: offer.sdp
   })
   await peerConnection.setRemoteDescription(
@@ -158,23 +190,40 @@ const createPeerConnection = async () => {
  * 初始化socket
  */
 const initSocket = () => {
-  websocket.value = io('ws://localhost:81')
+  websocket.value = io(import.meta.env.VITE_SOCKET_URL)
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
-  websocket.value.emit('joinRoom', {
-    roomId: liveInfo.roomId
+  websocket.value.emit(
+    'joinRoom',
+    {
+      roomId: liveInfo.roomId,
+      user: userStore.userInfoGet._id
+    },
+    ({ room }: any) => {
+      console.log('加入房间成功' + room)
+      const tip =
+        '系统提示：哔哩哔哩直播内容及互动评论须严格遵守直播规范，严禁传播违法违规、低俗血暴、吸烟酗酒、造谣诈骗等不良有害信息。如有违规，平台将对违规直播间或账号进行相应的处罚！注意理性打赏，严禁未成年人直播或打赏。请勿轻信各类招聘征婚、代练代抽、刷钻、购买礼包码、游戏币等广告信息，且如主播在推广商品中诱导私下交易，请谨慎判断，以免上当受骗。'
+      messageList.push({
+        text: tip,
+        type: LiveRoom.MESSAGE_TYPE.NOTICE
+      })
+    }
+  )
+  websocket.value.on('memberJoined', ({ username }: any) => {
+    messageList.push({
+      text: username + '  进入直播间',
+      type: LiveRoom.MESSAGE_TYPE.WELCOME
+    })
   })
-
-  websocket.value.on('userJoined', (room: string, socketId: string) => {
-    console.log('用户加入房间' + room + 'socketId' + socketId)
-    currentSocketId.value = socketId
-  })
-  websocket.value.on('otherJoined', () => {
-    console.log('用户加入房间')
-  })
-  websocket.value.on('message', ({ text, roomId }: LiveRoom.LiveroomMessageForm) => {
-    console.log('收到消息' + text + '' + roomId)
+  websocket.value.on('message', (data: LiveRoom.LiveroomMessageResult) => {
+    messageList.push({
+      type: LiveRoom.MESSAGE_TYPE.DANMU,
+      text: data.text,
+      username: data.username,
+      userId: data.userId,
+      role: data.role
+    })
   })
   websocket.value.on('liveStreamStatus', (status: LiveStreamStatusEnum) => {
     console.log('liveStreamStatus' + status)
@@ -333,13 +382,55 @@ const initSocket = () => {
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-
+      .content-list::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+        border: 2px solid #f2f2f2;
+        background-color: #f2f2f2;
+      }
       .content-list {
         height: 600px;
-
-        .tip {
-          font-size: 14px;
-          color: var(--el-color-primary);
+        overflow-y: auto;
+        .content-item {
+          display: flex;
+          justify-content: flex-start;
+          align-items: center;
+          margin: 6px 0;
+          .host {
+            border: 1px solid var(--el-color-primary);
+            padding: 0 5px;
+            color: var(--el-color-primary);
+            font-size: 12px;
+            margin-right: 5px;
+          }
+          .manager {
+            border: 1px solid var(--el-color-primary);
+            padding: 0 5px;
+            color: var(--el-color-primary);
+            font-size: 12px;
+            margin-right: 5px;
+          }
+          .username {
+            color: #c9ccd0;
+            font-size: 14px;
+          }
+          .text {
+            color: #61666d;
+            font-size: 14px;
+            margin-left: 4px;
+          }
+          .join {
+            .text {
+              color: #999999;
+              font-size: 14px;
+            }
+          }
+          .tip {
+            .text {
+              font-size: 14px;
+              color: var(--el-color-primary);
+            }
+          }
         }
       }
 

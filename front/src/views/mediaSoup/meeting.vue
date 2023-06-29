@@ -7,9 +7,8 @@ import { onMounted, ref } from 'vue'
 import { io } from 'socket.io-client'
 import { Device } from 'mediasoup-client'
 let websocket = ref()
-// import mySignaling from './my-signaling' // Our own signaling stuff.
 onMounted(async () => {
-  websocket.value = io('ws://localhost:81')
+  websocket.value = io(import.meta.env.VITE_SOCKET_URL)
   websocket.value.on('connect', () => {
     console.log('连接成功')
   })
