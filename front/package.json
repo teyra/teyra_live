@@ -23,6 +23,7 @@
     "sass": "^1.63.2",
     "socket.io": "^4.6.2",
     "socket.io-client": "^4.6.2",
+    "vant": "^4.6.0",
     "video.js": "^8.3.0",
     "videojs-flash": "^2.2.1",
     "vue": "^3.3.2",

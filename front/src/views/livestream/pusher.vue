@@ -2,17 +2,7 @@
   <div class="flex justify-center items-center push-container">
     <div class="left-container flex-column">
       <div class="video-container">
-        <video
-          ref="localVideoRef"
-          class="w-960 h-540"
-          autoplay
-          webkit-playsinline="true"
-          playsinline
-          x-webkit-airplay="allow"
-          x5-video-player-type="h5"
-          x5-video-player-fullscreen="true"
-          x5-video-orientation="portraint"
-        ></video>
+        <video ref="localVideoRef" class="w-960 h-540" style="object-fit: fill" autoplay></video>
         <div class="media-action-bar" v-if="materialList.length === 0">
           <div class="box">
             <el-icon :size="30">

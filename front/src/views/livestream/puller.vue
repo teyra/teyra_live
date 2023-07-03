@@ -12,9 +12,22 @@
             </div>
           </div>
         </div>
-        <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-          style="width: 1000px; height: 540px" autoplay webkit-playsinline="true" playsinline x-webkit-airplay="allow"
-          x5-video-player-type="h5" x5-video-player-fullscreen="true" x5-video-orientation="portraint" controls></video>
+        <video
+          ref="localVideoRef"
+          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+          style="width: 1000px; height: 540px; object-fit: fill"
+          autoplay
+          muted
+        ></video>
+        <div class="custom-conctrols">
+          <el-icon :size="30" @click="fullscreen">
+            <i-ep-FullScreen />
+          </el-icon>
+          <el-icon :size="30" @click="play">
+            <i-ep-VideoPlay />
+          </el-icon>
+          <el-icon :size="30" @click="pause"><i-ep-VideoPause /></el-icon>
+        </div>
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -55,16 +68,60 @@
           </div>
         </div>
         <div class="send-container">
-          <el-input v-model="message" placeholder="和主播聊聊吧~" class="small-input" maxlength="20" show-word-limit></el-input>
+          <el-input
+            v-model="message"
+            placeholder="和主播聊聊吧~"
+            class="small-input"
+            maxlength="20"
+            show-word-limit
+          ></el-input>
           <el-button type="primary" @click="sendMessage">发送</el-button>
         </div>
       </div>
     </div>
   </div>
   <div v-if="platForm === 2" class="mobile-container">
-    <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" style="width: 100%; height: 100%"
-      autoplay webkit-playsinline="true" playsinline x-webkit-airplay="allow" x5-video-player-type="h5"
-      x5-video-player-fullscreen="true" x5-video-orientation="portraint" controls></video>
+    <div class="top-container">
+      <div class="header-container">
+        <div class="left">
+          <img src="@/assets/image/avatar.jpg" class="round-50" alt="" />
+          <span class="title">{{ liveInfo.title }}</span>
+        </div>
+        <van-icon name="share-o" color="#ffffff" size="1rem" />
+      </div>
+      <div class="live-watch-count">
+        <span>63.1万人看过</span>
+      </div>
+    </div>
+    <div class="video-container">
+      <video
+        ref="localVideoRef"
+        class="video"
+        v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+        preload="auto"
+        webkit-playsinline="true"
+        playsinline="true"
+        x-webkIT-airplay="allow"
+        x5-video-player-tyPE="h5"
+        x5-video-player-fullscreen="true"
+        x5-video-orientation="portraint"
+        autoplay
+        muted
+      ></video>
+      <van-icon
+        name="play-circle-o"
+        v-if="!playing"
+        color="#ffffff"
+        @click="play"
+        class="play"
+        size="3rem"
+      />
+    </div>
+    <div class="bottom-container">
+      <div class="fullscreen">
+        <img src="@/assets/image/landscape.svg" width="25" height="30" alt="" @click="fullscreen" />
+      </div>
+    </div>
   </div>
 </template>
 
@@ -104,9 +161,31 @@ let messageList = reactive([] as LiveRoom.LiveroomMessageResult[])
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection = reactive({} as RTCPeerConnection)
+let playing = ref(false)
 onMounted(() => {
   init()
 })
+const fullscreen = () => {
+  if (localVideoRef.value.enterFullscreen) {
+    console.log('requestFullScreen')
+    localVideoRef.value.enterFullscreen()
+  } else if (localVideoRef.value.mozEnterFullscreen) {
+    console.log('mozRequestFullScreen')
+    localVideoRef.value.mozEnterFullscreen()
+  } else if (localVideoRef.value.webkitEnterFullscreen) {
+    console.log('webkitEnterFullscreen')
+    localVideoRef.value.webkitEnterFullscreen()
+  }
+}
+const play = () => {
+  localVideoRef.value.muted = false
+  localVideoRef.value.play()
+  playing.value = true
+}
+const pause = () => {
+  localVideoRef.value.pause()
+  playing.value = false
+}
 const sendMessage = () => {
   if (!message.value) {
     return
@@ -141,16 +220,15 @@ const init = async () => {
     await getLiveStatus(id)
     await createPeerConnection()
     initSocket()
-
   }
 }
 const checkPlatform = () => {
   if (/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
-    console.log('手机端');
+    console.log('手机端')
     platForm.value = 2
   } else {
     platForm.value = 1
-    console.log('PC端');
+    console.log('PC端')
   }
 }
 const getLiveStatus = async (id: any) => {
@@ -169,9 +247,8 @@ const createPeerConnection = async () => {
     }
   })
   peerConnection.ontrack = (event) => {
-    console.log('23213213')
-    // liveStreamStatus.value = LiveStreamStatusEnum.ONLINE
     localVideoRef.value.srcObject = event.streams[0]
+    // localVideoRef.value.muted = false
   }
   peerConnection.addTransceiver('audio', { direction: 'recvonly' })
   peerConnection.addTransceiver('video', { direction: 'recvonly' })
@@ -258,7 +335,17 @@ const initSocket = () => {
       background: #131212;
       border-top-left-radius: 5px;
       border-top-right-radius: 5px;
-
+      .custom-conctrols {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        color: #ffffff;
+        .el-icon:hover {
+          cursor: pointer;
+          color: #ff6699;
+        }
+      }
       .live-info-bar {
         display: flex;
         justify-content: space-between;
@@ -455,8 +542,66 @@ const initSocket = () => {
 
 .mobile-container {
   height: 100vh;
-  width: 100vh;
-  background-color: #131212;
+  width: 100%;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, rgb(27 28 30) 0%, rgb(24 21 23) 100%);
+  .top-container {
+    padding: 10px;
+    margin-bottom: 5rem;
+    .header-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      .left {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        img {
+          width: 35px;
+          height: 35px;
+        }
+        .title {
+          color: #f0eaea;
+          font-size: 16px;
+          font-weight: 500;
+          margin-left: 10px;
+        }
+      }
+    }
+    .live-watch-count {
+      padding: 10px 0;
+      span {
+        color: #c8c5c5;
+        font-size: 12px;
+      }
+    }
+  }
+  .video-container {
+    width: 100%;
+    height: 30%;
+    position: relative;
+    background-color: #131212;
+    .video {
+      width: 100%;
+      height: 100%;
+      object-fit: fill;
+    }
+    .play {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  .bottom-container {
+    padding: 10px;
+    .fullscreen {
+      text-align: right;
+    }
+  }
 }
 </style>
-@/api/modules/srs
