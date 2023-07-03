@@ -2,7 +2,7 @@
   <div class="flex justify-center items-center pull-container" v-if="platForm === 1">
     <Header></Header>
     <div class="left-container flex-column">
-      <div class="video-container">
+      <div class="video-container" ref="videoContainer">
         <div class="live-info-bar opc-9 p-10 bg-white">
           <div class="left-content">
             <img src="@/assets/image/avatar.jpg" class="w-65 h-65 round-50" alt="" />
@@ -12,22 +12,31 @@
             </div>
           </div>
         </div>
-        <video
-          ref="localVideoRef"
-          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-          style="width: 1000px; height: 540px; object-fit: fill"
-          autoplay
-          muted
-        ></video>
-        <div class="custom-conctrols">
-          <el-icon :size="30" @click="fullscreen">
-            <i-ep-FullScreen />
-          </el-icon>
-          <el-icon :size="30" @click="play">
-            <i-ep-VideoPlay />
-          </el-icon>
-          <el-icon :size="30" @click="pause"><i-ep-VideoPause /></el-icon>
+        <div class="video-center" ref="videoCenter">
+          <video ref="localVideoRef" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" :width="videoWidth"
+            :height="videoHeight" style="object-fit: fill" autoplay muted></video>
+          <div class="custom-conctrols">
+            <div class="left">
+              <el-icon :size="30" @click="play" v-if="!playing">
+                <i-ep-VideoPlay />
+              </el-icon>
+              <el-icon :size="30" @click="pause" v-else><i-ep-VideoPause /></el-icon>
+              <div class="volume-control">
+                <div class="volume-line">
+                  <el-slider v-model="volume" vertical height="80px" />
+                </div>
+                <img src="@/assets/image/player/volume1_d52cb8.webp" width="24" height="24" class="voice" alt=""
+                  style="margin-left: 10px;" v-if="!muted" @click="muteVoice(false)">
+                <img src="@/assets/image/player/volume2_7870c9.webp" width="24" height="24" class="voice" alt=""
+                  style="margin-left: 10px;" v-else @click="muteVoice(true)">
+              </div>
+            </div>
+            <el-icon :size="24" @click="fullscreen">
+              <i-ep-FullScreen />
+            </el-icon>
+          </div>
         </div>
+
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -68,13 +77,7 @@
           </div>
         </div>
         <div class="send-container">
-          <el-input
-            v-model="message"
-            placeholder="和主播聊聊吧~"
-            class="small-input"
-            maxlength="20"
-            show-word-limit
-          ></el-input>
+          <el-input v-model="message" placeholder="和主播聊聊吧~" class="small-input" maxlength="20" show-word-limit></el-input>
           <el-button type="primary" @click="sendMessage">发送</el-button>
         </div>
       </div>
@@ -94,28 +97,10 @@
       </div>
     </div>
     <div class="video-container">
-      <video
-        ref="localVideoRef"
-        class="video"
-        v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-        preload="auto"
-        webkit-playsinline="true"
-        playsinline="true"
-        x-webkIT-airplay="allow"
-        x5-video-player-tyPE="h5"
-        x5-video-player-fullscreen="true"
-        x5-video-orientation="portraint"
-        autoplay
-        muted
-      ></video>
-      <van-icon
-        name="play-circle-o"
-        v-if="!playing"
-        color="#ffffff"
-        @click="play"
-        class="play"
-        size="3rem"
-      />
+      <video ref="localVideoRef" class="video" v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" preload="auto"
+        webkit-playsinline="true" playsinline="true" x-webkIT-airplay="allow" x5-video-player-tyPE="h5"
+        x5-video-player-fullscreen="true" x5-video-orientation="portraint" autoplay muted></video>
+      <van-icon name="play-circle-o" v-if="!playing" color="#ffffff" @click="play" class="play" size="3rem" />
     </div>
     <div class="bottom-container">
       <div class="fullscreen">
@@ -126,7 +111,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref, watch } from 'vue'
 import { io } from 'socket.io-client'
 import Header from '@/components/Header.vue'
 import { LiveStreamStatusEnum } from '@/enums/media'
@@ -160,31 +145,72 @@ let contentList: any = ref<HTMLElement>()
 let messageList = reactive([] as LiveRoom.LiveroomMessageResult[])
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let localVideoRef: any = ref<HTMLVideoElement>()
+let videoCenter: any = ref<HTMLElement>()
 let peerConnection = reactive({} as RTCPeerConnection)
+let videoWidth = ref(1000)
+let videoHeight = ref(540)
 let playing = ref(false)
+let volume = ref(0)
+let muted = ref(false)
+watch(
+  volume,
+  (newVal) => {
+    if (localVideoRef.value) {
+      localVideoRef.value.volume = newVal / 100
+      if (newVal > 0) {
+        localVideoRef.value.muted = false
+        muted.value = false
+      }
+      else {
+        muted.value = true
+        localVideoRef.value.muted = true
+      }
+    }
+  },
+  {
+    deep: true,
+    immediate: true
+  }
+)
 onMounted(() => {
   init()
 })
 const fullscreen = () => {
+  console.log(videoCenter.value.webkitRequestFullScreen);
   if (localVideoRef.value.enterFullscreen) {
     console.log('requestFullScreen')
     localVideoRef.value.enterFullscreen()
   } else if (localVideoRef.value.mozEnterFullscreen) {
     console.log('mozRequestFullScreen')
     localVideoRef.value.mozEnterFullscreen()
-  } else if (localVideoRef.value.webkitEnterFullscreen) {
+  } else if (videoCenter.value.webkitRequestFullScreen) {
     console.log('webkitEnterFullscreen')
-    localVideoRef.value.webkitEnterFullscreen()
+    videoCenter.value.webkitRequestFullScreen()
+    console.log();
+    videoWidth.value = window.screen.availWidth
+    videoHeight.value = window.screen.availHeight
+
   }
 }
 const play = () => {
   localVideoRef.value.muted = false
   localVideoRef.value.play()
   playing.value = true
+  muted.value = false
 }
 const pause = () => {
   localVideoRef.value.pause()
   playing.value = false
+}
+const muteVoice = (mode = false) => {
+  if (mode) {
+    localVideoRef.value.muted = false
+    muted.value = false
+  }
+  else {
+    localVideoRef.value.muted = true
+    muted.value = true
+  }
 }
 const sendMessage = () => {
   if (!message.value) {
@@ -220,6 +246,12 @@ const init = async () => {
     await getLiveStatus(id)
     await createPeerConnection()
     initSocket()
+    document.addEventListener("fullscreenchange", (e) => {
+      console.log('fullscreenchange', e)
+      nextTick(() => {
+        console.log('fullscreenchange', e)
+      })
+    })
   }
 }
 const checkPlatform = () => {
@@ -248,7 +280,9 @@ const createPeerConnection = async () => {
   })
   peerConnection.ontrack = (event) => {
     localVideoRef.value.srcObject = event.streams[0]
-    // localVideoRef.value.muted = false
+    playing.value = true
+    muted.value = localVideoRef.value.muted
+    // volume.value = localVideoRef.value.volume * 100
   }
   peerConnection.addTransceiver('audio', { direction: 'recvonly' })
   peerConnection.addTransceiver('video', { direction: 'recvonly' })
@@ -315,6 +349,12 @@ const initSocket = () => {
   })
 }
 </script>
+<style>
+.el-slider__button {
+  width: 15px;
+  height: 15px;
+}
+</style>
 <style scoped lang="scss">
 .pull-container {
   height: 100vh;
@@ -335,17 +375,60 @@ const initSocket = () => {
       background: #131212;
       border-top-left-radius: 5px;
       border-top-right-radius: 5px;
-      .custom-conctrols {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        color: #ffffff;
-        .el-icon:hover {
+
+      .video-center {
+        video::-webkit-media-controls {
+          display: none !important;
+        }
+
+        .controls {
+          z-index: 2147483647;
+          opacity: 1;
+        }
+
+        .custom-conctrols {
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          color: #ffffff;
+          background: #131212;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 10px 15px;
           cursor: pointer;
-          color: #ff6699;
+
+          .left {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+
+            .volume-control {
+              position: relative;
+              display: flex;
+
+              .volume-line {
+                display: none;
+                position: absolute;
+                bottom: 25px;
+              }
+            }
+
+            .volume-control:hover .volume-line {
+              display: block;
+            }
+          }
+
+          .el-icon:hover {
+            cursor: pointer;
+            color: #ffffff;
+          }
         }
       }
+
+
+
       .live-info-bar {
         display: flex;
         justify-content: space-between;
@@ -548,21 +631,26 @@ const initSocket = () => {
   left: 0;
   right: 0;
   background: linear-gradient(180deg, rgb(27 28 30) 0%, rgb(24 21 23) 100%);
+
   .top-container {
     padding: 10px;
     margin-bottom: 5rem;
+
     .header-container {
       display: flex;
       justify-content: space-between;
       align-items: center;
+
       .left {
         display: flex;
         justify-content: flex-start;
         align-items: center;
+
         img {
           width: 35px;
           height: 35px;
         }
+
         .title {
           color: #f0eaea;
           font-size: 16px;
@@ -571,24 +659,29 @@ const initSocket = () => {
         }
       }
     }
+
     .live-watch-count {
       padding: 10px 0;
+
       span {
         color: #c8c5c5;
         font-size: 12px;
       }
     }
   }
+
   .video-container {
     width: 100%;
     height: 30%;
     position: relative;
     background-color: #131212;
+
     .video {
       width: 100%;
       height: 100%;
       object-fit: fill;
     }
+
     .play {
       position: absolute;
       top: 50%;
@@ -599,6 +692,7 @@ const initSocket = () => {
 
   .bottom-container {
     padding: 10px;
+
     .fullscreen {
       text-align: right;
     }
