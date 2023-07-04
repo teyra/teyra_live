@@ -21,6 +21,7 @@
     "mediasoup-client": "^3.6.84",
     "pinia": "^2.0.36",
     "sass": "^1.63.2",
+    "screenfull": "^6.0.2",
     "socket.io": "^4.6.2",
     "socket.io-client": "^4.6.2",
     "vant": "^4.6.0",

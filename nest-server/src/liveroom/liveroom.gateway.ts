@@ -31,23 +31,23 @@ export class LiveroomGateway {
     private readonly liveUserRoleModel: ReturnModelType<typeof LiveUserRole>,
     @Inject(Message.name)
     private readonly messageModel: ReturnModelType<typeof Message>,
-  ) { }
+  ) {}
   async handleConnection(socket: Socket) {
     try {
       const currentToken = socket.handshake.auth.token;
       const tokenVerify = await this.jwtService.verifyAsync(currentToken, {
         secret: jwtConstants.secret,
-      })
-      const existRedisToken = await this.redisService.get('user-token' + tokenVerify.sub);
+      });
+      const existRedisToken = await this.redisService.get(
+        'user-token' + tokenVerify.sub,
+      );
       if (!existRedisToken) {
-      console.log('existRedisToken');
         throw new UnauthorizedException('token过期');
       }
       if (String(currentToken) !== String(existRedisToken)) {
-      console.log('currentToken');
         throw new UnauthorizedException('token过期');
       }
-    } catch (e) { }
+    } catch (e) {}
   }
   @SubscribeMessage('joinRoom')
   async joinRoom(
