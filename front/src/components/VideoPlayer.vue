@@ -1,5 +1,22 @@
 <template>
   <div class="video-center" ref="videoCenter">
+    <div
+      class="barrage-track"
+      :style="{ top: item.offset + 'px' }"
+      v-for="(item, index) in trackList"
+      :key="index"
+    ></div>
+    <div
+      class="barrage-text"
+      ref="barrageText"
+      :style="{ top: item.offsetHeight + 'px' }"
+      :class="['barrage-item-' + item.status]"
+      v-for="(item, index) in barrageList"
+      :key="index"
+      @animationend="end(index)"
+    >
+      {{ item.text }}
+    </div>
     <video
       ref="localVideo"
       :width="width"
@@ -56,7 +73,8 @@
 </template>
 
 <script setup lang="ts" name="VideoPlayer">
-import { onMounted, ref, watch } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
+import { LiveRoom } from '@/api/interface/liveroom'
 let videoCenter: any = ref<HTMLElement>()
 let localVideo: any = ref<HTMLVideoElement>()
 let playing = ref(false)
@@ -65,6 +83,17 @@ let volume = ref(0)
 let isFullscreen = ref(false)
 let width = ref(1000)
 let height = ref(540)
+let barrageText: any = ref<HTMLElement>()
+let trackList = ref([] as LiveRoom.BarrageTrack[])
+let barrageList = ref([] as LiveRoom.BarrageItem[])
+const trackHeight = 56 //轨道高度
+const trackCount = 6 //轨道个数
+const props = defineProps({
+  barrage: {
+    type: Object,
+    default: () => null
+  }
+})
 watch(
   volume,
   (newVal) => {
@@ -84,7 +113,31 @@ watch(
     immediate: true
   }
 )
+watch(
+  () => props.barrage,
+  (val: any) => {
+    nextTick(() => {
+      if (val.text) {
+        const index = Math.floor(Math.random() * trackCount)
+        if (trackList.value[index].disabled) {
+          return
+        }
+        barrageList.value.push({
+          text: val.text,
+          status: LiveRoom.BarrageStatusEnum.INIT,
+          offsetHeight: index * trackHeight
+        })
+        send(index)
+      }
+    })
+  },
+  {
+    deep: true,
+    immediate: true
+  }
+)
 onMounted(() => {
+  initTrack()
   document.addEventListener('fullscreenchange', (evt) => {
     if (document.fullscreenElement) {
       console.log('进入全屏')
@@ -99,6 +152,34 @@ onMounted(() => {
     }
   })
 })
+const send = (i: number = 1) => {
+  nextTick(() => {
+    barrageList.value.map((v) => {
+      v.status = LiveRoom.BarrageStatusEnum.ACTIVE
+      return v
+    })
+    trackList.value[i].disabled = true
+    const containerWidth = videoCenter.value.offsetWidth
+    const textWidth = barrageText.value[0].offsetWidth
+    const delay = (textWidth / (containerWidth + textWidth)) * 5 * 1000
+    setTimeout(() => {
+      trackList.value[i].disabled = false
+    }, delay)
+  })
+}
+const end = (index: number) => {
+  nextTick(() => {
+    barrageList.value.splice(index, 1)
+  })
+}
+const initTrack = () => {
+  for (let i = 0; i < trackCount; i++) {
+    trackList.value.push({
+      offset: i * trackHeight,
+      disabled: false
+    })
+  }
+}
 const play = () => {
   localVideo.value.muted = false
   localVideo.value.play()
@@ -120,7 +201,6 @@ const muteVoice = (mode = false) => {
 }
 const fullscreen = () => {
   if (isFullscreen.value) {
-    console.log('isFullscreen')
     if (document.exitFullscreen) {
       document.exitFullscreen()
     }
@@ -138,6 +218,65 @@ const fullscreen = () => {
 
 <style scoped lang="scss">
 .video-center {
+  overflow: hidden;
+  position: relative;
+  .barrage-track {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 56px;
+    background: transparent;
+  }
+
+  .barrage-track:nth-child(2n) {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 56px;
+    background: transparent;
+  }
+
+  .barrage-text {
+    color: #ffffff;
+    white-space: nowrap;
+    line-height: 56px;
+  }
+
+  .barrage-item-init {
+    position: absolute;
+    left: 100%;
+    top: 0;
+  }
+
+  .barrage-item-active {
+    animation: active 5s linear;
+    z-index: 99;
+    position: absolute;
+  }
+
+  @keyframes active {
+    from {
+      left: 100%;
+    }
+
+    to {
+      left: 0;
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
+
+  @-webkit-keyframes active {
+    from {
+      left: 100%;
+    }
+
+    to {
+      left: 0;
+      transform: translate3d(-100%, 0, 0);
+    }
+  }
   video::-webkit-media-controls {
     display: none !important;
   }

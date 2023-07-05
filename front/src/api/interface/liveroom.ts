@@ -35,4 +35,18 @@ export namespace LiveRoom {
     user: string
     role: ROLE_TYPE
   }
+  export interface BarrageTrack {
+    offset: number
+    disabled: boolean
+  }
+  export enum BarrageStatusEnum {
+    INIT = 'init',
+    ACTIVE = 'active',
+    END = 'end'
+  }
+  export interface BarrageItem {
+    text: string
+    status: BarrageStatusEnum
+    offsetHeight: number
+  }
 }

@@ -12,7 +12,10 @@
             </div>
           </div>
         </div>
-        <VideoPlayer v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" />
+        <VideoPlayer
+          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
+          :barrage="damuMessage"
+        />
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -57,6 +60,7 @@
             v-model="message"
             placeholder="和主播聊聊吧~"
             class="small-input"
+            id="sendInput"
             maxlength="20"
             show-word-limit
           ></el-input>
@@ -79,11 +83,37 @@
       </div>
     </div>
     <MobileVideoPlayer v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" />
+    <div class="content-list" ref="contentList">
+      <div v-for="(item, index) in messageList" :key="index" class="content-item">
+        <div v-if="item.type === LiveRoom.MESSAGE_TYPE.DANMU">
+          <span v-if="item.role === 4" class="host">主播</span>
+          <span v-if="item.role === 3" class="manager">管理员</span>
+          <span class="username"> {{ item.username }} :</span>
+          <span class="text">{{ item.text }}</span>
+        </div>
+        <div class="tip" v-if="item.type === LiveRoom.MESSAGE_TYPE.NOTICE">
+          <span class="text">{{ item.text }}</span>
+        </div>
+        <div class="join" v-if="item.type === LiveRoom.MESSAGE_TYPE.WELCOME">
+          <span class="text">{{ item.text }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="send-container">
+      <input
+        v-model="message"
+        maxlength="20"
+        type="text"
+        placeholder="和主播聊聊吧~"
+        class="field"
+      />
+      <van-button size="small" color="#131212" @click="sendMessage">发送</van-button>
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { onMounted, reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
 import Header from '@/components/Header.vue'
 import VideoPlayer from '@/components/VideoPlayer.vue'
@@ -117,6 +147,10 @@ let moreLiveRoomList = reactive([
 let message = ref('')
 let contentList: any = ref<HTMLElement>()
 let messageList = reactive([] as LiveRoom.LiveroomMessageResult[])
+let damuMessage: LiveRoom.LiveroomMessageResult = reactive({
+  text: '',
+  type: LiveRoom.MESSAGE_TYPE.DANMU
+})
 let liveStreamStatus = ref<LiveStreamStatusEnum>(LiveStreamStatusEnum.OFFLINE)
 let peerConnection = reactive({} as RTCPeerConnection)
 onMounted(() => {
@@ -156,6 +190,13 @@ const init = async () => {
     await getLiveStatus(id)
     await createPeerConnection()
     initSocket()
+    const input: any = document.getElementById('sendInput')
+    input.addEventListener('keyup', function (event: any) {
+      event.preventDefault()
+      if (event.keyCode === 13) {
+        sendMessage()
+      }
+    })
   }
 }
 const checkPlatform = () => {
@@ -230,6 +271,10 @@ const initSocket = () => {
     })
   })
   websocket.value.on('message', (data: LiveRoom.LiveroomMessageResult) => {
+    damuMessage = {
+      type: LiveRoom.MESSAGE_TYPE.DANMU,
+      text: data.text
+    }
     messageList.push({
       type: LiveRoom.MESSAGE_TYPE.DANMU,
       text: data.text,
@@ -482,7 +527,7 @@ const initSocket = () => {
 
   .top-container {
     padding: 10px;
-    margin-bottom: 5rem;
+    margin-bottom: 2rem;
 
     .header-container {
       display: flex;
@@ -517,12 +562,81 @@ const initSocket = () => {
       }
     }
   }
+  .content-list::-webkit-scrollbar {
+    display: none;
+  }
 
-  .video-container {
-    width: 100%;
-    height: 30%;
-    position: relative;
-    background-color: #131212;
+  .content-list {
+    height: 35%;
+    overflow-y: auto;
+    padding: 10px;
+    width: 80%;
+
+    .content-item {
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      margin: 6px 0;
+
+      .host {
+        border: 1px solid var(--el-color-primary);
+        padding: 0 5px;
+        color: var(--el-color-primary);
+        font-size: 12px;
+        margin-right: 5px;
+      }
+
+      .manager {
+        border: 1px solid var(--el-color-primary);
+        padding: 0 5px;
+        color: var(--el-color-primary);
+        font-size: 12px;
+        margin-right: 5px;
+      }
+
+      .username {
+        color: #c9ccd0;
+        font-size: 14px;
+      }
+
+      .text {
+        color: #61666d;
+        font-size: 14px;
+        margin-left: 4px;
+      }
+
+      .join {
+        .text {
+          color: #999999;
+          font-size: 14px;
+        }
+      }
+
+      .tip {
+        .text {
+          font-size: 14px;
+          color: #e6e5e5;
+        }
+      }
+    }
+  }
+  .send-container {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    .field {
+      background: #131212;
+      border-radius: 10px;
+      width: 50%;
+      color: #ffffff;
+      border: unset;
+      padding: 0.5rem;
+    }
   }
 }
 </style>

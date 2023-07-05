@@ -5,7 +5,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { io } from 'socket.io-client'
-import { Device } from 'mediasoup-client'
 let websocket = ref()
 onMounted(async () => {
   websocket.value = io(import.meta.env.VITE_SOCKET_URL)
@@ -24,7 +23,6 @@ onMounted(async () => {
   )
   websocket.value.on('ownerCreate', (data: any) => {})
   // Create a device (use browser auto-detection).
-  const device = new Device()
   // Communicate with our server app to retrieve router RTP capabilities.
   websocket.value.emit('getRouterCapabilities', (data: any) => {
     console.log('获取路由参数' + data)

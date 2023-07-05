@@ -14,7 +14,7 @@
       autoplay
       muted
     ></video>
-    <div class="custom-conctrols" ref="customConctrols">
+    <div class="custom-conctrols" ref="customConctrols" v-show="props.controls && isShowControls">
       <div class="conctrols-content">
         <div class="left">
           <van-icon
@@ -59,7 +59,7 @@
       color="#ffffff"
       class="play"
       size="3rem"
-      @click="play"
+      @click.stop="play"
     />
   </div>
   <div class="bottom-container">
@@ -79,6 +79,14 @@ let muted = ref(false)
 let volume = ref(0)
 let width = ref(0)
 let height = ref(0)
+let isShowControls = ref(false)
+let countTimer: any = null
+const props = defineProps({
+  controls: {
+    type: Boolean,
+    default: false
+  }
+})
 watch(
   volume,
   (newVal) => {
@@ -127,7 +135,11 @@ const fullscreen = () => {
   }
 }
 const showControls = () => {
-  console.log(customConctrols.value.style)
+  isShowControls.value = true
+  clearInterval(countTimer)
+  countTimer = setTimeout(() => {
+    isShowControls.value = false
+  }, 5000)
 }
 </script>
 <style scoped lang="scss">
@@ -138,20 +150,20 @@ const showControls = () => {
   video {
     object-fit: fill;
   }
-  video:hover + .custom-conctrols .conctrols-content {
-    animation: move 3s linear;
-  }
-  @keyframes move {
-    0% {
-      opacity: 1;
-    }
-    99% {
-      opacity: 1;
-    }
-    100% {
-      opacity: 0;
-    }
-  }
+  // video:hover + .custom-conctrols .conctrols-content {
+  //   animation: move 3s linear;
+  // }
+  // @keyframes move {
+  //   0% {
+  //     opacity: 1;
+  //   }
+  //   99% {
+  //     opacity: 1;
+  //   }
+  //   100% {
+  //     opacity: 0;
+  //   }
+  // }
   .custom-conctrols {
     position: absolute;
     bottom: 0;
@@ -162,7 +174,7 @@ const showControls = () => {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      opacity: 0;
+      opacity: 1;
       color: #ffffff;
       background: linear-gradient(0deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0) 100%);
       cursor: pointer;
@@ -184,9 +196,9 @@ const showControls = () => {
       }
     }
   }
-  .custom-conctrols:hover .conctrols-content {
-    opacity: 1;
-  }
+  // .custom-conctrols:hover .conctrols-content {
+  //   opacity: 1;
+  // }
   .play {
     position: absolute;
     top: 50%;
