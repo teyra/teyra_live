@@ -11,12 +11,12 @@ export const routes = [
   {
     path: '/live-push',
     name: 'LivePush',
-    component: () => import('@/views/livestream/pusher.vue')
+    component: () => import('@/views/livestream/pusher1.vue')
   },
   {
     path: '/live-pull',
     name: 'LivePull',
-    component: () => import('@/views/livestream/puller.vue')
+    component: () => import('@/views/livestream/puller1.vue')
   },
   {
     path: '/meeting',

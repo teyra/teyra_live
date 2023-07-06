@@ -7,10 +7,10 @@ const router = createRouter({
   routes: routes
 })
 router.beforeEach(async (to) => {
-  const token = localStorage.getItem('token')
-  if (token) {
-    const userStore = UserStore()
-    await userStore.getUserInfo()
-  }
+  // const token = localStorage.getItem('token')
+  // if (token) {
+  //   const userStore = UserStore()
+  //   await userStore.getUserInfo()
+  // }
 })
 export default router
