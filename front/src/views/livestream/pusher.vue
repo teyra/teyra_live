@@ -375,8 +375,11 @@ const createPeerConnection = async () => {
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
   const session: any = await webRtcSrsPublishApi({
-    api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/',
-    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream/${liveInfo.roomId}`,
+    api:
+      import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/?secret=' + import.meta.env.VITE_SECRET,
+    streamurl:
+      `webrtc://${import.meta.env.VITE_IP}/live/${liveInfo.roomId}?secret=` +
+      import.meta.env.VITE_SECRET,
     sdp: offer.sdp
   })
   await peerConnection.setRemoteDescription(

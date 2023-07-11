@@ -1,15 +1,25 @@
 <template>
   <div>
-    <video ref="localVideoRef" controls style="width: 1000px; height: 400px;" preload="auto" webkit-playsinline="true"
-      playsinline="true" x-webkIT-airplay="allow" x5-video-player-tyPE="h5" x5-video-player-fullscreen="true"
-      x5-video-orientation="portraint" autoplay></video>
+    <video
+      ref="localVideoRef"
+      controls
+      style="width: 1000px; height: 400px"
+      preload="auto"
+      webkit-playsinline="true"
+      playsinline="true"
+      x-webkIT-airplay="allow"
+      x5-video-player-tyPE="h5"
+      x5-video-player-fullscreen="true"
+      x5-video-orientation="portraint"
+      autoplay
+    ></video>
     <el-button @click="addWindow">开始推流</el-button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { webRtcSrsPublishApi } from '@/api/modules/srs';
-import { onMounted, reactive, ref } from 'vue';
+import { webRtcSrsPublishApi } from '@/api/modules/srs'
+import { onMounted, reactive, ref } from 'vue'
 let localVideoRef: any = ref<HTMLVideoElement>()
 let peerConnection: any = reactive({} as RTCPeerConnection)
 let mediaStream: any = ref(null)
@@ -38,8 +48,9 @@ const createPeerConnection = async () => {
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
   const session: any = await webRtcSrsPublishApi({
-    api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/',
-    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream/1233123`,
+    api:
+      import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/?secret=' + import.meta.env.VITE_SECRET,
+    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream?secret=` + import.meta.env.VITE_SECRET,
     sdp: offer.sdp
   })
   await peerConnection.setRemoteDescription(
