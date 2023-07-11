@@ -12,10 +12,9 @@
             </div>
           </div>
         </div>
-        <VideoPlayer
-          v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE"
-          :barrage="damuMessage"
-        />
+        <div v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE">
+          <VideoPlayer :barrage="damuMessage" />
+        </div>
         <div class="more-container" v-if="liveStreamStatus === LiveStreamStatusEnum.OFFLINE">
           <div class="title">主播还在赶来的路上。。。</div>
           <div class="more-bar">
@@ -82,7 +81,9 @@
         <span>63.1万人看过</span>
       </div>
     </div>
-    <MobileVideoPlayer v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE" />
+    <div v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE">
+      <MobileVideoPlayer />
+    </div>
     <div class="content-list" ref="contentList">
       <div v-for="(item, index) in messageList" :key="index" class="content-item">
         <div v-if="item.type === LiveRoom.MESSAGE_TYPE.DANMU">
@@ -113,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { nextTick, onMounted, reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
 import Header from '@/components/Header.vue'
 import VideoPlayer from '@/components/VideoPlayer.vue'
@@ -190,13 +191,6 @@ const init = async () => {
     await getLiveStatus(id)
     await createPeerConnection()
     initSocket()
-    const input: any = document.getElementById('sendInput')
-    input.addEventListener('keyup', function (event: any) {
-      event.preventDefault()
-      if (event.keyCode === 13) {
-        sendMessage()
-      }
-    })
   }
 }
 const checkPlatform = () => {
@@ -206,6 +200,15 @@ const checkPlatform = () => {
   } else {
     platForm.value = 1
     console.log('PC端')
+    nextTick(() => {
+      const input: any = document.getElementById('sendInput')
+      input.addEventListener('keyup', function (event: any) {
+        event.preventDefault()
+        if (event.keyCode === 13) {
+          sendMessage()
+        }
+      })
+    })
   }
 }
 const getLiveStatus = async (id: any) => {
@@ -224,6 +227,7 @@ const createPeerConnection = async () => {
     }
   })
   peerConnection.ontrack = (event) => {
+    console.log(event)
     const videoElment: any = document.querySelector('video')
     videoElment.srcObject = event.streams[0]
   }
@@ -233,7 +237,7 @@ const createPeerConnection = async () => {
   await peerConnection.setLocalDescription(offer)
   const session: any = await webRtcSrsPullApi({
     api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/play/',
-    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream/${liveInfo.roomId}`,
+    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/${liveInfo.roomId}`,
     sdp: offer.sdp
   })
   await peerConnection.setRemoteDescription(
