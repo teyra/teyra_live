@@ -4,7 +4,7 @@ import { getUserInfoApi, logoutApi } from '@/api/modules/user'
 export const UserStore = defineStore({
   id: 'UserState',
   state: () => ({
-    userInfo: {}
+    userInfo: {} as any
   }),
   getters: {
     userInfoGet: (state: any) => state.userInfo

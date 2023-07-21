@@ -13,7 +13,6 @@ instance.interceptors.request.use(
       ...config.params,
       _t: timestamp
     }
-    console.log(config.baseURL);
     if (config.baseURL === import.meta.env.VITE_API_URL) {
       const token = localStorage.getItem('token')
       if (token) {

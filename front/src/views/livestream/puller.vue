@@ -1,6 +1,5 @@
 <template>
-  <div class="flex justify-center items-center pull-container" v-if="platForm === 1">
-    <Header></Header>
+  <div class="flex justify-center items-center pull-container">
     <div class="left-container flex-column">
       <div class="video-container">
         <div class="live-info-bar opc-9 p-10 bg-white">
@@ -68,57 +67,12 @@
       </div>
     </div>
   </div>
-  <div v-if="platForm === 2" class="mobile-container">
-    <div class="top-container">
-      <div class="header-container">
-        <div class="left">
-          <img src="@/assets/image/avatar.jpg" class="round-50" alt="" />
-          <span class="title">{{ liveInfo.title }}</span>
-        </div>
-        <van-icon name="share-o" color="#ffffff" size="1rem" />
-      </div>
-      <div class="live-watch-count">
-        <span>63.1万人看过</span>
-      </div>
-    </div>
-    <div v-show="liveStreamStatus === LiveStreamStatusEnum.ONLINE">
-      <MobileVideoPlayer />
-    </div>
-    <div class="content-list" ref="contentList">
-      <div v-for="(item, index) in messageList" :key="index" class="content-item">
-        <div v-if="item.type === LiveRoom.MESSAGE_TYPE.DANMU">
-          <span v-if="item.role === 4" class="host">主播</span>
-          <span v-if="item.role === 3" class="manager">管理员</span>
-          <span class="username"> {{ item.username }} :</span>
-          <span class="text">{{ item.text }}</span>
-        </div>
-        <div class="tip" v-if="item.type === LiveRoom.MESSAGE_TYPE.NOTICE">
-          <span class="text">{{ item.text }}</span>
-        </div>
-        <div class="join" v-if="item.type === LiveRoom.MESSAGE_TYPE.WELCOME">
-          <span class="text">{{ item.text }}</span>
-        </div>
-      </div>
-    </div>
-    <div class="send-container">
-      <input
-        v-model="message"
-        maxlength="20"
-        type="text"
-        placeholder="和主播聊聊吧~"
-        class="field"
-      />
-      <van-button size="small" color="#131212" @click="sendMessage">发送</van-button>
-    </div>
-  </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, onMounted, reactive, ref } from 'vue'
 import { io } from 'socket.io-client'
-import Header from '@/components/Header.vue'
 import VideoPlayer from '@/components/VideoPlayer.vue'
-import MobileVideoPlayer from '@/components/MobileVideoPlayer.vue'
 import { LiveStreamStatusEnum } from '@/enums/media'
 import { webRtcSrsPullApi } from '@/api/modules/srs'
 import { getLiveRoomDetailApi, getLiveStatusApi } from '@/api/modules/liveroom'
@@ -128,7 +82,6 @@ import { LiveRoom } from '@/api/interface/liveroom'
 const userStore = UserStore()
 const route = useRoute()
 let websocket = ref()
-let platForm = ref(1)
 let liveInfo = reactive({
   roomId: '',
   title: '',
@@ -166,7 +119,7 @@ const sendMessage = () => {
     {
       text: message.value,
       roomId: liveInfo.roomId,
-      user: userStore.userInfoGet._id
+      user: userStore.userInfo._id
     } as LiveRoom.LiveroomMessageForm,
     () => {
       console.log('发送成功')
@@ -180,35 +133,25 @@ const getLiveRoomDetail = async (id: any) => {
   liveInfo.roomId = data._id
   liveInfo.title = data.title
   liveInfo.description = data.description
+  nextTick(() => {
+    const input: any = document.getElementById('sendInput')
+    input.addEventListener('keyup', function (event: any) {
+      event.preventDefault()
+      if (event.keyCode === 13) {
+        sendMessage()
+      }
+    })
+  })
 }
 const init = async () => {
   const {
     query: { id }
   } = route
   if (id) {
-    checkPlatform()
     await getLiveRoomDetail(id)
     await getLiveStatus(id)
     await createPeerConnection()
     initSocket()
-  }
-}
-const checkPlatform = () => {
-  if (/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
-    console.log('手机端')
-    platForm.value = 2
-  } else {
-    platForm.value = 1
-    console.log('PC端')
-    nextTick(() => {
-      const input: any = document.getElementById('sendInput')
-      input.addEventListener('keyup', function (event: any) {
-        event.preventDefault()
-        if (event.keyCode === 13) {
-          sendMessage()
-        }
-      })
-    })
   }
 }
 const getLiveStatus = async (id: any) => {
@@ -256,7 +199,7 @@ const initSocket = () => {
     'joinRoom',
     {
       roomId: liveInfo.roomId,
-      user: userStore.userInfoGet._id
+      user: userStore.userInfo._id
     },
     ({ room }: any) => {
       console.log('加入房间成功' + room)
@@ -312,7 +255,7 @@ const initSocket = () => {
   min-height: 680px;
   min-width: 1320px;
   width: 100vw;
-  background-image: url('@/assets/image/pull_bg.webp');
+  background-image: url('@/assets/image/live_pull_bg.jpg');
   background-repeat: no-repeat;
   background-size: cover;
 
@@ -516,130 +459,6 @@ const initSocket = () => {
         align-items: center;
         padding: 10px 0;
       }
-    }
-  }
-}
-
-.mobile-container {
-  height: 100vh;
-  width: 100%;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: linear-gradient(180deg, rgb(27 28 30) 0%, rgb(24 21 23) 100%);
-
-  .top-container {
-    padding: 10px;
-    margin-bottom: 2rem;
-
-    .header-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-
-      .left {
-        display: flex;
-        justify-content: flex-start;
-        align-items: center;
-
-        img {
-          width: 35px;
-          height: 35px;
-        }
-
-        .title {
-          color: #f0eaea;
-          font-size: 16px;
-          font-weight: 500;
-          margin-left: 10px;
-        }
-      }
-    }
-
-    .live-watch-count {
-      padding: 10px 0;
-
-      span {
-        color: #c8c5c5;
-        font-size: 12px;
-      }
-    }
-  }
-  .content-list::-webkit-scrollbar {
-    display: none;
-  }
-
-  .content-list {
-    height: 35%;
-    overflow-y: auto;
-    padding: 10px;
-    width: 80%;
-
-    .content-item {
-      display: flex;
-      justify-content: flex-start;
-      align-items: center;
-      margin: 6px 0;
-
-      .host {
-        border: 1px solid var(--el-color-primary);
-        padding: 0 5px;
-        color: var(--el-color-primary);
-        font-size: 12px;
-        margin-right: 5px;
-      }
-
-      .manager {
-        border: 1px solid var(--el-color-primary);
-        padding: 0 5px;
-        color: var(--el-color-primary);
-        font-size: 12px;
-        margin-right: 5px;
-      }
-
-      .username {
-        color: #c9ccd0;
-        font-size: 14px;
-      }
-
-      .text {
-        color: #61666d;
-        font-size: 14px;
-        margin-left: 4px;
-      }
-
-      .join {
-        .text {
-          color: #999999;
-          font-size: 14px;
-        }
-      }
-
-      .tip {
-        .text {
-          font-size: 14px;
-          color: #e6e5e5;
-        }
-      }
-    }
-  }
-  .send-container {
-    position: fixed;
-    bottom: 20px;
-    left: 0;
-    right: 0;
-    padding: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    .field {
-      background: #131212;
-      border-radius: 10px;
-      width: 50%;
-      color: #ffffff;
-      border: unset;
-      padding: 0.5rem;
     }
   }
 }
