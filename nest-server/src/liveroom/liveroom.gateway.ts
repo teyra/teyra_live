@@ -18,7 +18,7 @@ import { LiveUserRole } from 'src/live-user-role/entities/live-user-role.entity'
 import { AuthGuard } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
 import { jwtConstants } from 'src/auth/constant';
-@WebSocketGateway(81, { cors: true })
+@WebSocketGateway(8081, { cors: true })
 export class LiveroomGateway {
   @WebSocketServer() server: Server;
   constructor(
