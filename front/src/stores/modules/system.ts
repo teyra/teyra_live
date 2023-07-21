@@ -13,10 +13,8 @@ export const SystemStore = defineStore({
     getPlatForm() {
       if (/Android|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)) {
         this.platForm = PlatFormEnum.MOBILE
-        console.log('sdad')
       } else {
         this.platForm = PlatFormEnum.PC
-        console.log('sdad111')
       }
     }
   }

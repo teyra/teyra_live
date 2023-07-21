@@ -1,5 +1,8 @@
 <template>
-  <div class="header-container" v-if="!centerDialogVisible">
+  <div
+    class="header-container"
+    v-if="systemStore.platForm === PlatFormEnum.PC && !centerDialogVisible"
+  >
     <div class="username">{{ userStore.userInfoGet }}</div>
     <div class="right">
       <el-button @click="webWatch" type="primary">web端观看</el-button>
@@ -115,13 +118,6 @@ let mobileCenterDialogVisible = ref(false)
 let centerDialogVisible = ref(false)
 let codeVisible = ref(false)
 let canvasRef = ref<HTMLCanvasElement>()
-onMounted(() => {
-  console.log(userStore.userInfoGet)
-  if (systemStore.platForm === PlatFormEnum.PC) {
-  }
-  if (systemStore.platForm === PlatFormEnum.MOBILE) {
-  }
-})
 const token = computed(() => {
   return localStorage.getItem('token')
 })
@@ -168,7 +164,7 @@ const mobileScanWatch = async () => {
   codeVisible.value = true
   const { data } = await getMyLiveRoomApi()
   nextTick(() => {
-    const url = import.meta.env.VITE_MOBILE_URL + '/mobile/live-pull' + data._id
+    const url = import.meta.env.VITE_MOBILE_URL + '/mobile/live-pull?id=' + data._id
     QRcode.toCanvas(canvasRef.value, url, {
       width: 200
     })
