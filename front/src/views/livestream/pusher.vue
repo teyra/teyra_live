@@ -8,7 +8,7 @@
             <el-icon :size="30">
               <i-ep-plus />
             </el-icon>
-            <span class="text">添加素材</span>
+            <span class="text">添加素材1</span>
           </div>
           <div class="more-bar">
             <div class="box" @click="addMediaMaterial(MediaMaterialEnum.WINDOW)">
@@ -249,6 +249,8 @@ const sendMessage = () => {
  * 初始化socket
  */
 const initSocket = () => {
+  // wss://liveapi.teyrain.com:8081
+  // import.meta.env.VITE_SOCKET_URL
   websocket.value = io(import.meta.env.VITE_SOCKET_URL, {
     auth: {
       token: localStorage.getItem('token')
