@@ -45,7 +45,7 @@ const createPeerConnection = async () => {
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
   const session: any = await webRtcSrsPullApi({
-    api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/play/',
+    api: import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/whip-play/',
     streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream`,
     sdp: offer.sdp
   })

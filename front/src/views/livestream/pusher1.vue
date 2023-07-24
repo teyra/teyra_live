@@ -1,18 +1,8 @@
 <template>
   <div>
-    <video
-      ref="localVideoRef"
-      controls
-      style="width: 1000px; height: 400px"
-      preload="auto"
-      webkit-playsinline="true"
-      playsinline="true"
-      x-webkIT-airplay="allow"
-      x5-video-player-tyPE="h5"
-      x5-video-player-fullscreen="true"
-      x5-video-orientation="portraint"
-      autoplay
-    ></video>
+    <video ref="localVideoRef" controls style="width: 1000px; height: 400px" preload="auto" webkit-playsinline="true"
+      playsinline="true" x-webkIT-airplay="allow" x5-video-player-tyPE="h5" x5-video-player-fullscreen="true"
+      x5-video-orientation="portraint" autoplay muted></video>
     <el-button @click="addWindow">开始推流</el-button>
   </div>
 </template>
@@ -47,10 +37,16 @@ const createPeerConnection = async () => {
   }
   const offer = await peerConnection.createOffer()
   await peerConnection.setLocalDescription(offer)
+  // const session: any = await webRtcSrsPublishApi({
+  //   api:
+  //     import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/',
+  //   streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream`,
+  //   sdp: offer.sdp
+  // })
   const session: any = await webRtcSrsPublishApi({
     api:
-      import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/publish/?secret=' + import.meta.env.VITE_SECRET,
-    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream?secret=` + import.meta.env.VITE_SECRET,
+      import.meta.env.VITE_HTTPS_API_URL + '/rtc/v1/whip/',
+    streamurl: `webrtc://${import.meta.env.VITE_IP}/live/livestream`,
     sdp: offer.sdp
   })
   await peerConnection.setRemoteDescription(

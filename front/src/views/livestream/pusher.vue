@@ -2,7 +2,7 @@
   <div class="flex justify-center items-center push-container">
     <div class="left-container flex-column">
       <div class="video-container">
-        <video ref="localVideoRef" class="w-960 h-540" style="object-fit: fill" autoplay></video>
+        <video ref="localVideoRef" class="w-960 h-540" style="object-fit: fill" autoplay muted></video>
         <div class="media-action-bar" v-if="materialList.length === 0">
           <div class="box">
             <el-icon :size="30">
@@ -324,7 +324,7 @@ const addWindow = async (type: MediaMaterialEnum = MediaMaterialEnum.WINDOW) => 
       })
     }
     localVideoRef.value.srcObject = event
-    volume.value = localVideoRef.value.volume * 100
+    // volume.value = localVideoRef.value.volume * 100
     mediaStream.value = event
     await createPeerConnection()
   } catch (error) {
