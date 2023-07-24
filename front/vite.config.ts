@@ -7,8 +7,9 @@ import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver, VantResolver } from 'unplugin-vue-components/resolvers'
 import Icons from 'unplugin-icons/vite'
 import IconsResolver from 'unplugin-icons/resolver'
-import { viteVConsole } from 'vite-plugin-vconsole'
-import path from 'path'
+import terser from '@rollup/plugin-terser' //打包 压缩js代码 清除console.log
+import compressPlugin from 'vite-plugin-compression' //开启gzip、br压缩
+import viteImagemin from 'vite-plugin-imagemin' //打包压缩图片
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   const env = loadEnv(mode, process.cwd(), '')
   const PORT = Number(env.VITE_PORT)
@@ -32,6 +33,41 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
     plugins: [
       vue(),
       vueJsx(),
+      terser(),
+      compressPlugin({
+        verbose: true,
+        disable: false,
+        threshold: 10240,
+        algorithm: 'gzip',
+        ext: '.gz'
+      }),
+      viteImagemin({
+        gifsicle: {
+          optimizationLevel: 7,
+          interlaced: false
+        },
+        optipng: {
+          optimizationLevel: 7
+        },
+        mozjpeg: {
+          quality: 20
+        },
+        pngquant: {
+          quality: [0.8, 0.9],
+          speed: 4
+        },
+        svgo: {
+          plugins: [
+            {
+              name: 'removeViewBox'
+            },
+            {
+              name: 'removeEmptyAttrs',
+              active: false
+            }
+          ]
+        }
+      }),
       AutoImport({
         resolvers: [
           ElementPlusResolver(),
@@ -51,15 +87,6 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       }),
       Icons({
         autoInstall: true
-      }),
-      viteVConsole({
-        entry: path.resolve('src/main.ts'), // 入口文件，或者可以使用这个配置: [path.resolve('src/main.js')]
-        localEnabled: true, // 本地是否启用
-        enabled: false, // 是否启用
-        config: {
-          maxLogNumber: 1000,
-          theme: 'light' // 主题颜色 'dark'|'light'
-        }
       })
     ],
     resolve: {

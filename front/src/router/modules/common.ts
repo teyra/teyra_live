@@ -1,7 +1,7 @@
 export const routes = [
   {
     path: '/',
-    redirect: '/live-pull'
+    redirect: '/live-push'
   },
   {
     path: '/about',
@@ -29,8 +29,8 @@ export const routes = [
     component: () => import('@/views/livestream/puller1.vue')
   },
   {
-    path: '/meeting',
-    name: 'meeting',
-    component: () => import('@/views/mediaSoup/meeting.vue')
+    path: '/mobile/live-pull',
+    name: 'mobilePull',
+    component: () => import('@/views/livestream/mobile/pull.vue')
   }
 ]

@@ -151,7 +151,8 @@ import { webRtcSrsPublishApi } from '@/api/modules/srs'
 import {
   getLiveRoomDetailApi,
   updateLiveRoomTitleApi,
-  getUserRoleListApi
+  getUserRoleListApi,
+  getMyLiveRoomApi
 } from '@/api/modules/liveroom'
 import { useRoute } from 'vue-router'
 import { UserStore } from '@/stores/modules/user'
@@ -195,14 +196,9 @@ watch(
   }
 )
 const init = async () => {
-  const {
-    query: { id }
-  } = route
-  if (id) {
-    await getLiveRoomDetail(id)
-    await getUserRoleList()
-    initSocket()
-  }
+  await getLiveRoomDetail()
+  await getUserRoleList()
+  initSocket()
 }
 /**
  * 获取直播间用户角色列表
@@ -221,8 +217,8 @@ const confirmTitle = async () => {
 const cancelTitle = () => {
   editTitleVisible.value = false
 }
-const getLiveRoomDetail = async (id: any) => {
-  const { data } = await getLiveRoomDetailApi(id)
+const getLiveRoomDetail = async () => {
+  const { data } = await getMyLiveRoomApi()
   liveInfo.roomId = data._id
   liveInfo.title = data.title
   liveInfo.description = data.description
@@ -236,7 +232,7 @@ const sendMessage = () => {
     {
       text: message.value,
       roomId: liveInfo.roomId,
-      user: userStore.userInfoGet._id
+      user: userStore.userInfo._id
     } as LiveRoom.LiveroomMessageForm,
     () => {
       console.log('发送成功')
@@ -263,7 +259,7 @@ const initSocket = () => {
     'joinRoom',
     {
       roomId: liveInfo.roomId,
-      user: userStore.userInfoGet._id
+      user: userStore.userInfo._id
     },
     ({ room }: any) => {
       console.log('加入房间成功' + room)
@@ -389,15 +385,25 @@ const createPeerConnection = async () => {
   )
 }
 </script>
+<style lang="scss">
+.push-container {
+  .el-dialog--center .el-dialog__footer {
+    padding: 15px;
+  }
+}
+</style>
 <style scoped lang="scss">
 .push-container {
   height: 100vh;
   min-height: 680px;
   min-width: 1320px;
   width: 100vw;
-  background-image: url('@/assets/image/live_bg.jpg');
+  background-image: url('@/assets/image/live_push_bg.png');
   background-repeat: no-repeat;
   background-size: cover;
+  .el-dialog--center .el-dialog__footer {
+    padding: 10px;
+  }
   .left-container {
     .video-container {
       position: relative;

@@ -1,6 +1,9 @@
 import { HttpCodeEnum } from '@/enums/httpCode'
+import { PlatFormEnum } from '@/enums/system'
+import { SystemStore } from '@/stores/modules/system'
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { showToast } from 'vant'
 const instance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   timeout: 1000
@@ -13,7 +16,6 @@ instance.interceptors.request.use(
       ...config.params,
       _t: timestamp
     }
-    console.log(config.baseURL);
     if (config.baseURL === import.meta.env.VITE_API_URL) {
       const token = localStorage.getItem('token')
       if (token) {
@@ -41,7 +43,13 @@ instance.interceptors.response.use(
       // const path = '/login?redirect=' + window.location.pathname
       // return router.replace(path)
     }
-    ElMessage.error(error.response.data.message)
+    const systemStore = SystemStore()
+    if (systemStore.platForm === PlatFormEnum.PC) {
+      ElMessage.error(error.response.data.message)
+    }
+    // if (systemStore.platForm === PlatFormEnum.MOBILE) {
+    //   showToast(error.response.data.message)
+    // }
     return Promise.reject(error)
   }
 )
