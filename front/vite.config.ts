@@ -10,6 +10,8 @@ import IconsResolver from 'unplugin-icons/resolver'
 import terser from '@rollup/plugin-terser' //打包 压缩js代码 清除console.log
 import compressPlugin from 'vite-plugin-compression' //开启gzip、br压缩
 import viteImagemin from 'vite-plugin-imagemin' //打包压缩图片
+import { viteVConsole } from 'vite-plugin-vconsole'
+import path from 'path'
 export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
   const env = loadEnv(mode, process.cwd(), '')
   const PORT = Number(env.VITE_PORT)
@@ -34,6 +36,15 @@ export default defineConfig(({ mode }: ConfigEnv): UserConfig => {
       vue(),
       vueJsx(),
       terser(),
+      viteVConsole({
+        entry: path.resolve('src/main.ts'), // 入口文件，或者可以使用这个配置: [path.resolve('src/main.js')]
+        localEnabled: true, // 本地是否启用
+        enabled: true, // 是否启用
+        config: {
+          maxLogNumber: 1000,
+          theme: 'light' // 主题颜色 'dark'|'light'
+        }
+      }),
       compressPlugin({
         verbose: true,
         disable: false,

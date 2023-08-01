@@ -4,7 +4,7 @@ setGlobalOptions({
     timestamps: true,
   },
 });
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { MessageModule } from './message/message.module';
@@ -16,6 +16,7 @@ import { LiveroomModule } from './liveroom/liveroom.module';
 import { AuthModule } from './auth/auth.module';
 import { RedisModule } from './redis/redis.module';
 import { LiveUserRoleModule } from './live-user-role/live-user-role.module';
+import { MeetingModule } from './meeting/meeting.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
@@ -28,6 +29,7 @@ import { LiveUserRoleModule } from './live-user-role/live-user-role.module';
     AuthModule,
     RedisModule,
     LiveUserRoleModule,
+    MeetingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -32,5 +32,10 @@ export const routes = [
     path: '/mobile/live-pull',
     name: 'mobilePull',
     component: () => import('@/views/livestream/mobile/pull.vue')
+  },
+  {
+    path: '/meeting/oneToOne',
+    name: 'OneToOne',
+    component: () => import('@/views/meeting/OneToOne.vue')
   }
 ]

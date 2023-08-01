@@ -15,10 +15,9 @@ import { Message } from 'src/message/entities/message.entity';
 import { CreateMessageDto } from 'src/message/dto/create-message.dto';
 import { LiveUserRoleService } from 'src/live-user-role/live-user-role.service';
 import { LiveUserRole } from 'src/live-user-role/entities/live-user-role.entity';
-import { AuthGuard } from '@nestjs/passport';
 import { JwtService } from '@nestjs/jwt';
 import { jwtConstants } from 'src/auth/constant';
-@WebSocketGateway(8081, { cors: true })
+@WebSocketGateway(8081, {namespace: 'liveRoom', cors: true })
 export class LiveroomGateway {
   @WebSocketServer() server: Server;
   constructor(
