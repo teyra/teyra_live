@@ -18,6 +18,8 @@ import { ReturnModelType } from '@typegoose/typegoose';
 import { LiveUserRole } from 'src/live-user-role/entities/live-user-role.entity';
 import { Message } from 'src/message/entities/message.entity';
 import { CreateMessageDto } from 'src/message/dto/create-message.dto';
+import { LiveUserRoleService } from 'src/live-user-role/live-user-role.service';
+import { ROOM_TYPE } from 'src/live-user-role/dto/create-live-user-role.dto';
 
 @WebSocketGateway(8081, { namespace: 'meeting', cors: true })
 export class MeetingGateway {
@@ -26,6 +28,7 @@ export class MeetingGateway {
     private readonly meetingService: MeetingService,
     private readonly redisService: RedisService,
     private readonly jwtService: JwtService,
+    private readonly liveUserRoleService: LiveUserRoleService,
     @Inject(User.name)
     private readonly userModel: ReturnModelType<typeof User>,
     @Inject(LiveUserRole.name)
@@ -33,13 +36,39 @@ export class MeetingGateway {
     @Inject(Message.name)
     private readonly messageModel: ReturnModelType<typeof Message>,
   ) {}
-  @SubscribeMessage('createMeeting')
+  async handleConnection(socket: Socket) {
+    try {
+      const currentToken = socket.handshake.auth.token;
+      const tokenVerify = await this.jwtService.verifyAsync(currentToken, {
+        secret: jwtConstants.secret,
+      });
+      const existRedisToken = await this.redisService.get(
+        'user-token' + tokenVerify.sub,
+      );
+      if (!existRedisToken) {
+        throw new UnauthorizedException('token过期');
+      }
+      if (String(currentToken) !== String(existRedisToken)) {
+        throw new UnauthorizedException('token过期');
+      }
+    } catch (e) {}
+  }
+  @SubscribeMessage('joinMeeting')
   async create(
     @MessageBody() createMeetingDto: any,
     @ConnectedSocket() client: Socket,
   ) {
     const { roomId, user } = createMeetingDto;
     await client.join(roomId);
+    await this.liveUserRoleService.create({
+      user,
+      liveRoom: roomId,
+      type:ROOM_TYPE.MEETING
+    });
+    const currentUser = await this.userModel.findById(user);
+    await this.server.to(roomId).emit('memberJoined', {
+      username: currentUser.username,
+    });
     return {
       room: createMeetingDto.roomId,
     };

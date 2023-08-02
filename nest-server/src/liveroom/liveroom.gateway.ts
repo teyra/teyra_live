@@ -17,7 +17,8 @@ import { LiveUserRoleService } from 'src/live-user-role/live-user-role.service';
 import { LiveUserRole } from 'src/live-user-role/entities/live-user-role.entity';
 import { JwtService } from '@nestjs/jwt';
 import { jwtConstants } from 'src/auth/constant';
-@WebSocketGateway(8081, {namespace: 'liveRoom', cors: true })
+import { ROOM_TYPE } from 'src/live-user-role/dto/create-live-user-role.dto';
+@WebSocketGateway(8081, { namespace: 'liveRoom', cors: true })
 export class LiveroomGateway {
   @WebSocketServer() server: Server;
   constructor(
@@ -58,6 +59,7 @@ export class LiveroomGateway {
     await this.liveUserRoleService.create({
       user,
       liveRoom: roomId,
+      type: ROOM_TYPE.LIVE,
     });
     const currentUser = await this.userModel.findById(user);
     await this.server.to(roomId).emit('memberJoined', {
